@@ -1,0 +1,9 @@
+{'loss': '0.2036', 'grad_norm': '0.5569', 'learning_rate': '1.747e-05', 'epoch': '0.1276'}
+{'loss': '0.1857', 'grad_norm': '0.646', 'learning_rate': '1.492e-05', 'epoch': '0.2551'}
+{'loss': '0.1952', 'grad_norm': '0.3219', 'learning_rate': '1.237e-05', 'epoch': '0.3827'}
+{'loss': '0.205', 'grad_norm': '0.3214', 'learning_rate': '9.821e-06', 'epoch': '0.5102'}
+{'loss': '0.1934', 'grad_norm': '0.1852', 'learning_rate': '7.27e-06', 'epoch': '0.6378'}
+{'loss': '0.1843', 'grad_norm': '0.4738', 'learning_rate': '4.719e-06', 'epoch': '0.7653'}
+{'loss': '0.2003', 'grad_norm': '0.2627', 'learning_rate': '2.168e-06', 'epoch': '0.8929'}
+{'eval_loss': '0.2072', 'eval_token_accuracy': '0.9384', 'eval_runtime': '3.344', 'eval_samples_per_second': '598.5', 'eval_steps_per_second': '37.68', 'epoch': '1'}
+{'train_runtime': '184.5', 'train_samples_per_second': '67.97', 'train_steps_per_second': '4.249', 'train_loss': '0.1964', 'epoch': '1'}
