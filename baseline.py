@@ -220,7 +220,7 @@ trainer.train()
 # In[ ]:
 
 
-test_set    = load_iob2("./project/en_ewt-ud-test.iob2")
+test_set    = load_iob2("./project/en_ewt-ud-test-masked.iob2")
 test_tokens, test_labels = split_tokens_labels(test_set)
 test_labels_enc          = encode_labels(test_labels, label2id)
 test_tokenized           = tokenize_and_align_labels(test_tokens, test_labels_enc)
