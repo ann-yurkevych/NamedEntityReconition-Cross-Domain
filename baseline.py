@@ -44,8 +44,8 @@ def load_iob2(filepath):
 # In[4]:
 
 
-train_set = load_iob2("project/en_ewt-ud-train.iob2")
-dev_set = load_iob2("project/en_ewt-ud-dev.iob2")
+train_set = load_iob2("./project/en_ewt-ud-train.iob2")
+dev_set = load_iob2("./project/en_ewt-ud-dev.iob2")
 
 
 # ### label mapping
@@ -220,7 +220,7 @@ trainer.train()
 # In[ ]:
 
 
-test_set    = load_iob2("project/en_ewt-ud-test.iob2")
+test_set    = load_iob2("./project/en_ewt-ud-test.iob2")
 test_tokens, test_labels = split_tokens_labels(test_set)
 test_labels_enc          = encode_labels(test_labels, label2id)
 test_tokenized           = tokenize_and_align_labels(test_tokens, test_labels_enc)
@@ -229,7 +229,7 @@ test_dataset             = Dataset.from_dict(test_tokenized)
 predictions, _, _ = trainer.predict(test_dataset)
 predictions       = np.argmax(predictions, axis=-1)
 
-with open("predictions.iob2", "w", encoding="utf-8") as f:
+with open("./project/predictions.iob2", "w", encoding="utf-8") as f:
     for sent, pred_seq, label_seq in zip(test_set, predictions, test_tokenized["labels"]):
         word_idx = 0
         for pred, label in zip(pred_seq, label_seq):
