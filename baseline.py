@@ -33,8 +33,8 @@ def load_iob2(filepath):
                     current = []
             else:
                 parts = line.split()  
-                word  = parts[0]          
-                label = parts[-1]          
+                word  = parts[1]          
+                label = parts[2]          
                 current.append((word, label))
     if current:                            
         sentences.append(current)
@@ -208,7 +208,7 @@ trainer = Trainer(
     args=training_args,
     train_dataset=train_dataset,
     eval_dataset=dev_dataset,
-    processing_class=tokenizer,
+    tokenizer=tokenizer,
     compute_metrics=compute_metrics
 )
 
