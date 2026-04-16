@@ -229,13 +229,21 @@ test_dataset             = Dataset.from_dict(test_tokenized)
 predictions, _, _ = trainer.predict(test_dataset)
 predictions       = np.argmax(predictions, axis=-1)
 
+
 with open("./project/predictions.iob2", "w", encoding="utf-8") as f:
     for sent, pred_seq, label_seq in zip(test_set, predictions, test_tokenized["labels"]):
         word_idx = 0
+        token_id = 1  # start indexing from 1
+
         for pred, label in zip(pred_seq, label_seq):
             if label != -100 and word_idx < len(sent):
-                word  = sent[word_idx][0]
-                f.write(f"{word} {id2label[pred]}\n")
-                word_idx += 1
-        f.write("\n")
+                word = sent[word_idx][0]
+                pred_label = id2label[pred]
 
+                # write in correct format
+                f.write(f"{token_id}\t{word}\t{pred_label}\t-\t-\n")
+
+                word_idx += 1
+                token_id += 1
+
+        f.write("\n")  # sentence boundary
