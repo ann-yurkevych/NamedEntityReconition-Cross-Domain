@@ -104,10 +104,10 @@ CrossNER Politics evaluates on nine fine-grained types. The mapping is:
 
 | CoNLL-2003 | CrossNER Politics                      |
 | :--------: | :------------------------------------- |
-|    PER     | person, **politician**                 |
-|    ORG     | organization, **political-party**      |
-|    LOC     | location, **country**                  |
-|    MISC    | miscellaneous, **event**, **election** |
+|    PER     | person, **politician**                  |
+|    ORG     | organisation, **politicalparty**        |
+|    LOC     | location, **country**                   |
+|    MISC    | misc, **event**, **election**           |
 
 **Bold** types are fine-grained specialisations absent from CoNLL-2003 training data.
 

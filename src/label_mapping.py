@@ -8,26 +8,26 @@ CrossNER Politics evaluates on 9 fine-grained types.
 # Hierarchy mapping: CoNLL-2003 → CrossNER Politics
 HIERARCHY: dict[str, list[str]] = {
     "PER":  ["person", "politician"],
-    "ORG":  ["organization", "political-party"],
+    "ORG":  ["organisation", "politicalparty"],
     "LOC":  ["location", "country"],
-    "MISC": ["miscellaneous", "event", "election"],
+    "MISC": ["misc", "event", "election"],
 }
 
 # Reverse mapping: CrossNER → parent CoNLL type
 CROSSNER_TO_PARENT: dict[str, str] = {
-    "person":          "PER",
-    "politician":      "PER",
-    "organization":    "ORG",
-    "political-party": "ORG",
-    "location":        "LOC",
-    "country":         "LOC",
-    "miscellaneous":   "MISC",
-    "event":           "MISC",
-    "election":        "MISC",
+    "person":        "PER",
+    "politician":    "PER",
+    "organisation":  "ORG",
+    "politicalparty":"ORG",
+    "location":      "LOC",
+    "country":       "LOC",
+    "misc":          "MISC",
+    "event":         "MISC",
+    "election":      "MISC",
 }
 
 # Fine-grained types absent from CoNLL-2003
-FINEGRAINED: set[str] = {"politician", "political-party", "country", "event", "election"}
+FINEGRAINED: set[str] = {"politician", "politicalparty", "country", "event", "election"}
 
 
 def are_hierarchically_related(pred_label: str, gold_label: str) -> bool:
