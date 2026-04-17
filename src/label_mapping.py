@@ -70,9 +70,9 @@ def map_conll_to_politics(tags: list[str]) -> list[str]:
 
     Each coarse type maps to the generic (non-specialised) fine-grained type:
         PER  → person
-        ORG  → organization
+        ORG  → organisation
         LOC  → location
-        MISC → miscellaneous
+        MISC → misc
     """
     default_map = {coarse: fine_list[0] for coarse, fine_list in HIERARCHY.items()}
     return [_map_tag(t, default_map) for t in tags]
