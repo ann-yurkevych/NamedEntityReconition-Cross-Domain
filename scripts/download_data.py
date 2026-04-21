@@ -1,14 +1,12 @@
 """One-time script to download CoNLL-2003, CrossNER Politics, and DAPT unlabeled data."""
-import os
-import shutil
-import stat
-import subprocess
+import io
+import urllib.request
+import zipfile
 from pathlib import Path
 
 ROOT = Path(__file__).parent.parent
 CONLL_DIR    = ROOT / 'data' / 'raw' / 'conll2003'
 POLITICS_DIR = ROOT / 'data' / 'raw' / 'crossner' / 'politics'
-CLONE_DIR    = ROOT / 'data' / 'raw' / '_crossner_repo'
 UNLABELED_DIR = ROOT / 'data' / 'raw' / 'unlabeled'
 
 # Google Drive folder ID from shared link
@@ -31,22 +29,13 @@ print(f'  CoNLL-2003 saved to {CONLL_DIR}')
 # CrossNER Politics
 print('Downloading CrossNER Politics from GitHub...')
 POLITICS_DIR.mkdir(parents=True, exist_ok=True)
-if not CLONE_DIR.exists():
-    subprocess.run(
-        ['git', 'clone', '--depth', '1',
-         'https://github.com/zliucr/CrossNER.git', str(CLONE_DIR)],
-        check=True
-    )
-    
-src = CLONE_DIR / 'ner_data' / 'politics'
-
-for f in src.iterdir():
-    shutil.copy(f, POLITICS_DIR / f.name)
-def _remove_readonly(func, path, _):
-    os.chmod(path, stat.S_IWRITE)
-    func(path)
-
-shutil.rmtree(CLONE_DIR, onerror=_remove_readonly) # remove the entired cloned repo
+zip_url = 'https://github.com/zliucr/CrossNER/archive/refs/heads/main.zip'
+with urllib.request.urlopen(zip_url) as resp:
+    with zipfile.ZipFile(io.BytesIO(resp.read())) as zf:
+        for member in zf.namelist():
+            if member.startswith('CrossNER-main/ner_data/politics/') and not member.endswith('/'):
+                with zf.open(member) as src, open(POLITICS_DIR / Path(member).name, 'wb') as dst:
+                    dst.write(src.read())
 print(f'CrossNER Politics saved to {POLITICS_DIR}')
 
 # DAPT unlabeled data
@@ -54,6 +43,7 @@ print('Downloading DAPT unlabeled data from Google Drive...')
 try:
     import gdown
 except ImportError:
+    import subprocess
     subprocess.run(['pip', 'install', 'gdown', '-q'], check=True)
     import gdown
 

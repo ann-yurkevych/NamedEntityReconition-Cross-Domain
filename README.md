@@ -31,7 +31,7 @@ conda activate crossner               # activate it (every session)
 To verify it worked:
 
 ```bash
-python --version   # should say Python 3.10.x
+python --version   # should say Python 3.10 or newer
 ```
 
 **Option B: pip**
@@ -44,19 +44,35 @@ pip install -r requirements.txt
 
 ### Step 3 - Download datasets
 
-```powershell
+```bash
 python scripts/download_data.py
 ```
 
-This script fetches CoNLL-2003 via Hugging Face and clones CrossNER Politics from GitHub, placing everything in the correct `data/raw/` subdirectories. It only needs to be run once. Data is gitignored and never committed to the repo.
+This script fetches CoNLL-2003 via Hugging Face, downloads CrossNER Politics directly from GitHub, and downloads the DAPT unlabeled corpus from Google Drive via `gdown`. Everything is placed in `data/raw/`. It only needs to be run once. Data is gitignored and never committed to the repo.
 
 ---
 
-### Step 4 - Register the kernel and open notebooks
+### Step 4 - Run an experiment
+
+```bash
+python -m scripts.run_experiment
+```
+
+The script uses CUDA automatically if a GPU is available. If you have a GPU, reinstall torch with the CUDA build after activating the environment:
+
+```bash
+pip install torch --index-url https://download.pytorch.org/whl/cu128 --upgrade
+```
+
+The experiment mode is set in the `config` dict at the bottom of [scripts/run_experiment.py](scripts/run_experiment.py). Available modes: `crossner`, `zero_shot`, `transfer`.
+
+---
+
+### Step 5 - Register the kernel and open notebooks
 
 Register the conda environment as a Jupyter kernel (once):
 
-```powershell
+```bash
 python -m ipykernel install --user --name crossner --display-name "Python (crossner)"
 ```
 
@@ -71,14 +87,20 @@ Then open any notebook in VS Code, click the kernel selector in the top right, a
 ├── data/
 │   ├── raw/
 │   │   ├── conll2003/          # CoNLL-2003 source-domain data
-│   │   └── crossner/
-│   │       └── politics/       # CrossNER Politics target-domain data
+│   │   ├── crossner/
+│   │   │   └── politics/       # CrossNER Politics target-domain data
+│   │   └── unlabeled/          # DAPT unlabeled corpus (politics)
 │   └── processed/              # Tokenized / preprocessed splits
 ├── notebooks/                  # Exploratory and evaluation notebooks
 ├── scripts/
-│   └── download_data.sh        # One-time data download script
+│   ├── download_data.py        # One-time data download script
+│   ├── run_experiment.py       # Main training + evaluation entry point
+│   └── run_dapt.py             # Domain-adaptive pretraining script
 ├── src/
-│   └── label_mapping.py        # CoNLL-2003 ↔ CrossNER Politics label mapping
+│   ├── data/                   # Data loading and preprocessing
+│   ├── models/                 # BERT tagger model
+│   ├── training/               # Trainer, evaluator, losses
+│   └── utils/                  # Label mapping, metrics
 ├── results/
 │   ├── logs/                   # Training logs
 │   ├── models/                 # Saved model checkpoints (gitignored)
@@ -111,4 +133,4 @@ CrossNER Politics evaluates on nine fine-grained types. The mapping is:
 
 **Bold** types are fine-grained specialisations absent from CoNLL-2003 training data.
 
-`src/label_mapping.py` provides the utilities for the mapping.
+[src/utils/label_mapping.py](src/utils/label_mapping.py) provides the utilities for the mapping.
