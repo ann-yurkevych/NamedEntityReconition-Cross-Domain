@@ -58,4 +58,9 @@ gdown.download_folder(
 )
 print(f'  Unlabeled data saved to {UNLABELED_DIR}')
 
+# fix folder names to be lowercase for consistency
+for p in UNLABELED_DIR.iterdir():
+    if p.is_dir() and p.name != p.name.lower():
+        p.rename(p.parent / p.name.lower())
+
 print('\nDone. All data is in data/raw/.')
