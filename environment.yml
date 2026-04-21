@@ -12,6 +12,7 @@ dependencies:
     - seqeval>=1.2.2
     - huggingface-hub>=0.14
     - datasets>=2.14,<4.0
+    - evaluate>=0.4.0
     - pandas>=1.5
     - numpy>=1.24
     - scikit-learn>=1.2

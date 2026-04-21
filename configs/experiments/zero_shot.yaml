@@ -1,0 +1,24 @@
+model_name: bert-base-cased
+data_dir: data/raw
+domain: politics
+mode: zero_shot
+labels:
+  - O
+  - B-person
+  - I-person
+  - B-politician
+  - I-politician
+  - B-organisation
+  - I-organisation
+  - B-politicalparty
+  - I-politicalparty
+  - B-location
+  - I-location
+  - B-country
+  - I-country
+  - B-misc
+  - I-misc
+  - B-event
+  - I-event
+  - B-election
+  - I-election

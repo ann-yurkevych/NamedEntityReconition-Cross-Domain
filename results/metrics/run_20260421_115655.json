@@ -1,0 +1,31 @@
+{
+  "f1": 0.6187616031451348,
+  "config": {
+    "model_name": "bert-base-cased",
+    "data_dir": "data/raw",
+    "domain": "politics",
+    "mode": "crossner",
+    "labels": [
+      "O",
+      "B-person",
+      "I-person",
+      "B-politician",
+      "I-politician",
+      "B-organisation",
+      "I-organisation",
+      "B-politicalparty",
+      "I-politicalparty",
+      "B-location",
+      "I-location",
+      "B-country",
+      "I-country",
+      "B-misc",
+      "I-misc",
+      "B-event",
+      "I-event",
+      "B-election",
+      "I-election"
+    ]
+  },
+  "report": "                precision    recall  f1-score   support\n\n       country       0.53      0.44      0.48       418\n      election       0.78      0.90      0.83       434\n         event       0.31      0.27      0.29       195\n      location       0.70      0.85      0.77       599\n          misc       0.27      0.52      0.36       258\n  organisation       0.46      0.69      0.55       513\n        person       0.50      0.01      0.02       354\npoliticalparty       0.70      0.78      0.73       953\n    politician       0.54      0.95      0.69       485\n\n     micro avg       0.57      0.67      0.62      4209\n     macro avg       0.53      0.60      0.53      4209\n  weighted avg       0.58      0.67      0.59      4209\n"
+}
