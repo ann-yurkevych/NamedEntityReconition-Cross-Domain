@@ -1,4 +1,26 @@
 import os
+from pathlib import Path
+
+
+def load_unlabeled(data_dir: str, domain: str, variants: list[str] | None = None) -> list[str]:
+    if variants is None:
+        variants = ['domainlevel', 'entitylevel', 'integrated', 'tasklevel']
+
+    domain_dir = Path(data_dir) / 'unlabeled' / domain
+    texts: list[str] = []
+
+    for variant in variants:
+        fname = domain_dir / f"{domain}_{variant}.txt"
+        if not fname.exists():
+            continue
+        with open(fname, encoding='utf-8') as f:
+            for line in f:
+                line = line.strip()
+                if line:
+                    texts.append(line)
+
+    return texts
+
 
 def read_conll_format(path):
     texts = []
@@ -22,7 +44,7 @@ def read_conll_format(path):
 
 
 def load_conll2003(data_dir):
-    return read_conll_format(os.path.join(data_dir, "train.txt"))
+    return read_conll_format(os.path.join(data_dir, "conll2003", "train.txt"))
 
 
 def load_crossner(data_dir, domain):

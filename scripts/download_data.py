@@ -19,7 +19,13 @@ print('Downloading CoNLL-2003 via Hugging Face...')
 from datasets import load_dataset
 dataset = load_dataset('conll2003', trust_remote_code=True)
 CONLL_DIR.mkdir(parents=True, exist_ok=True)
-dataset.save_to_disk(str(CONLL_DIR))
+tag_names = dataset['train'].features['ner_tags'].feature.names # get tag names from the dataset features
+for split_name, split in dataset.items(): # loops over each split (train, validation, test)
+    with open(CONLL_DIR / f'{split_name}.txt', 'w', encoding='utf-8') as f:
+        for example in split:
+            for token, tag_id in zip(example['tokens'], example['ner_tags']):
+                f.write(f'{token} {tag_names[tag_id]}\n')
+            f.write('\n')
 print(f'  CoNLL-2003 saved to {CONLL_DIR}')
 
 # CrossNER Politics
@@ -31,15 +37,17 @@ if not CLONE_DIR.exists():
          'https://github.com/zliucr/CrossNER.git', str(CLONE_DIR)],
         check=True
     )
+    
 src = CLONE_DIR / 'ner_data' / 'politics'
+
 for f in src.iterdir():
     shutil.copy(f, POLITICS_DIR / f.name)
 def _remove_readonly(func, path, _):
     os.chmod(path, stat.S_IWRITE)
     func(path)
 
-shutil.rmtree(CLONE_DIR, onerror=_remove_readonly)
-print(f'  CrossNER Politics saved to {POLITICS_DIR}')
+shutil.rmtree(CLONE_DIR, onerror=_remove_readonly) # remove the entired cloned repo
+print(f'CrossNER Politics saved to {POLITICS_DIR}')
 
 # DAPT unlabeled data
 print('Downloading DAPT unlabeled data from Google Drive...')
