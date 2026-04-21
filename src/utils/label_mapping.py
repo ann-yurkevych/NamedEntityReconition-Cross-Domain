@@ -5,6 +5,14 @@ CoNLL-2003 trains on 4 types: PER, ORG, LOC, MISC.
 CrossNER Politics evaluates on 9 fine-grained types.
 """
 
+# All fine-grained entity types in CrossNER Politics domain
+CROSSNER_POLITICS_TYPES: list[str] = [
+    "person", "politician",
+    "organisation", "politicalparty",
+    "location", "country",
+    "misc", "event", "election",
+]
+
 # Hierarchy mapping: CoNLL-2003 → CrossNER Politics
 HIERARCHY: dict[str, list[str]] = {
     "PER":  ["person", "politician"],
@@ -91,3 +99,27 @@ def coarse_eval_pairs(
         [collapse_to_coarse(seq) for seq in gold_tags],
         [collapse_to_coarse(seq) for seq in pred_tags],
     )
+
+def get_crossner_labels() -> list[str]:
+    """
+    Returns the full IOB2 label list for CrossNER Politics,
+    including O, B- and I- prefixes for all 9 entity types.
+    """
+    labels = ["O"]
+    for etype in CROSSNER_POLITICS_TYPES:
+        labels.append(f"B-{etype}")
+        labels.append(f"I-{etype}")
+    return labels
+
+# -------------------------------
+def conll_to_crossner(label):
+    mapping = {
+        "B-PER": "B-person",
+        "I-PER": "I-person",
+        "B-ORG": "B-organisation",
+        "I-ORG": "I-organisation",
+        "B-LOC": "B-location",
+        "I-LOC": "I-location",
+        "O": "O"
+    }
+    return mapping.get(label, "O")
