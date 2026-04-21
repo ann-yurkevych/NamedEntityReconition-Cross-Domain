@@ -1,4 +1,4 @@
-"""One-time script to download CoNLL-2003 and CrossNER Politics datasets."""
+"""One-time script to download CoNLL-2003, CrossNER Politics, and DAPT unlabeled data."""
 import os
 import shutil
 import stat
@@ -9,6 +9,10 @@ ROOT = Path(__file__).parent.parent
 CONLL_DIR    = ROOT / 'data' / 'raw' / 'conll2003'
 POLITICS_DIR = ROOT / 'data' / 'raw' / 'crossner' / 'politics'
 CLONE_DIR    = ROOT / 'data' / 'raw' / '_crossner_repo'
+UNLABELED_DIR = ROOT / 'data' / 'raw' / 'unlabeled'
+
+# Google Drive folder ID from shared link
+GDRIVE_FOLDER_ID = '1xDAaTwruESNmleuIsln7IaNleNsYlHGn'
 
 # CoNLL-2003
 print('Downloading CoNLL-2003 via Hugging Face...')
@@ -36,5 +40,22 @@ def _remove_readonly(func, path, _):
 
 shutil.rmtree(CLONE_DIR, onerror=_remove_readonly)
 print(f'  CrossNER Politics saved to {POLITICS_DIR}')
+
+# DAPT unlabeled data
+print('Downloading DAPT unlabeled data from Google Drive...')
+try:
+    import gdown
+except ImportError:
+    subprocess.run(['pip', 'install', 'gdown', '-q'], check=True)
+    import gdown
+
+UNLABELED_DIR.mkdir(parents=True, exist_ok=True)
+gdown.download_folder(
+    id=GDRIVE_FOLDER_ID,
+    output=str(UNLABELED_DIR),
+    quiet=False,
+    use_cookies=False,
+)
+print(f'  Unlabeled data saved to {UNLABELED_DIR}')
 
 print('\nDone. All data is in data/raw/.')

@@ -18,3 +18,4 @@ dependencies:
     - tqdm>=4.65
     - matplotlib>=3.7
     - ipykernel>=6.0
+    - gdown>=4.7
