@@ -188,7 +188,7 @@ def run(config):
     f1, report = evaluator.evaluate(preds, refs)
     print("F1:", f1)
     print(report)
-    save_metrics(f1, report, config)
+    save_metrics(f1, report, config, preds=preds, refs=refs)
 
 
 if __name__ == "__main__":
