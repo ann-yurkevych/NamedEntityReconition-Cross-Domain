@@ -137,6 +137,31 @@ def run(config):
         trainer.train(train_loader)
         preds, refs = trainer.evaluate(test_loader)
 
+    elif config["mode"] == "dapt":
+        '''
+        4. BERT + DAPT (domain-adapted BERT --> CrossNER)
+
+        Pipeline:
+        Step 1: MLM pretraining on domain corpus (run separately via run_dapt.py)
+        Step 2: Load DAPT model weights, tokenizer from CoNLL fine-tuned BERT
+        Step 3: Finetune on CrossNER
+        '''
+        # Must use the tokenizer from the CoNLL fine-tuned BERT, not the DAPT
+        # model dir, to guarantee subword alignment is identical across experiments
+        tokenizer = AutoTokenizer.from_pretrained(config["conll_model_path"])
+        model = BertForNER(config["dapt_model_path"], len(label_list)).to(DEVICE)
+        trainer = Trainer(model, optimizer, DEVICE, label_weights=label_weights)
+
+        (train_texts, train_labels), _, (test_texts, test_labels) = load_crossner(
+            config["data_dir"], config["domain"]
+        )
+
+        train_loader = build_dataloader(train_texts, train_labels, tokenizer, label2id)
+        test_loader = build_dataloader(test_texts, test_labels, tokenizer, label2id)
+
+        trainer.train(train_loader)
+        preds, refs = trainer.evaluate(test_loader)
+
     evaluator = Evaluator(id2label)
     f1, report = evaluator.evaluate(preds, refs)
     print("F1:", f1)

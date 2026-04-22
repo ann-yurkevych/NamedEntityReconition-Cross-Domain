@@ -1,4 +1,6 @@
 model_name: bert-base-cased
+dapt_model_path: models/dapt-politics
+conll_model_path: models/conll-bert
 data_dir: data/raw
 domain: politics
 mode: dapt
