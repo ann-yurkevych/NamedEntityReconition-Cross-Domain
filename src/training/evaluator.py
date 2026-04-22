@@ -1,3 +1,9 @@
+'''
+Decodes integer ids back to tag strings while filtering out -100.
+Computes entity-level F1 and detailed seqeval report.
+'''
+
+
 from seqeval.metrics import classification_report, f1_score
 
 class Evaluator:

@@ -1,3 +1,12 @@
+'''
+BertForNER:
+    backbone: AutoModel (BERT encoder).
+    dropout.
+    linear classifier from hidden_size → num_labels.
+Outputs token-level logits for each sequence position
+'''
+
+
 import torch.nn as nn
 from transformers import AutoModel
 

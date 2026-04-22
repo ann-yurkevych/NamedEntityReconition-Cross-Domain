@@ -1,3 +1,9 @@
+'''
+DAPT model pretraining function
+It loads AutoModelForMaskedLM and runs MLM training with Hugging Face Trainer.
+'''
+
+
 from transformers import AutoModelForMaskedLM, Trainer, TrainingArguments
 
 def run_dapt(model_name, dataset, output_dir):

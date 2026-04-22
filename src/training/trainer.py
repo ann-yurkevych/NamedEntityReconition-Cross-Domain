@@ -1,3 +1,14 @@
+'''
+Trainer.train:
+    forward pass, cross-entropy over flattened token logits.
+    backward, optimizer step.
+    prints average epoch loss.
+Trainer.evaluate:
+    argmax predictions.
+    returns raw predicted label ids and reference label ids, sequence by sequence.
+'''
+
+
 import torch
 from torch.nn import CrossEntropyLoss
 from tqdm import tqdm

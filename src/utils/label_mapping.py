@@ -3,6 +3,18 @@ Label mapping between CoNLL-2003 (coarse) and CrossNER Politics (fine-grained).
 
 CoNLL-2003 trains on 4 types: PER, ORG, LOC, MISC.
 CrossNER Politics evaluates on 9 fine-grained types.
+
+
+Core cross-domain label logic.
+Defines hierarchy:
+    CoNLL coarse types PER/ORG/LOC/MISC
+    CrossNER politics fine types person/politician/etc.
+    
+map_conll_to_politics maps coarse CoNLL tags into generic politics tags:
+    PER → person, ORG → organisation, LOC → location, MISC → misc
+    
+get_crossner_labels returns full CrossNER politics IOB label list.
+Also includes coarse/fine helper functions for analysis
 """
 
 # All fine-grained entity types in CrossNER Politics domain

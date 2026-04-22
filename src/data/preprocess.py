@@ -1,3 +1,11 @@
+'''
+tokenize_and_align_labels:
+tokenizes pre-split word lists with is_split_into_words.
+assigns true label only to first subword.
+uses -100 for special tokens and non-first subwords so loss ignores them.
+'''
+
+
 def tokenize_and_align_labels(texts, labels, tokenizer, label2id):
     tokenized_inputs = tokenizer(
         texts,

@@ -1,3 +1,11 @@
+'''
+read_conll_format parses sentence-separated token/tag files.
+load_conll2003 reads only CoNLL train split from data/raw/conll2003/train.txt.
+load_crossner reads train/dev/test for one domain.
+load_unlabeled reads unlabeled domain text variants for DAPT.
+'''
+
+
 import os
 from pathlib import Path
 

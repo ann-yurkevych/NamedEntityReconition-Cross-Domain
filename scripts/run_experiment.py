@@ -1,3 +1,18 @@
+'''
+Main supervised experiment entrypoint.
+Builds tokenizer, label mapping, model, optimizer, trainer.
+
+Supports three modes:
+zero_shot: train on CoNLL, evaluate on CrossNER politics (no CrossNER finetune).
+crossner: train and test on CrossNER politics (in-domain).
+transfer: train on CoNLL, then finetune on CrossNER politics, then test.
+
+Uses a class-weight trick: label O gets low weight (0.1), so missing entities is penalized relatively more.
+
+Saves final F1 and classification report as JSON.
+'''
+
+
 import torch
 import json
 import os

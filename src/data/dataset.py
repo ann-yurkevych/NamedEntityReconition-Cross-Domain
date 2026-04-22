@@ -1,3 +1,9 @@
+'''
+NERDataset wraps tokenized encodings and aligned labels into a PyTorch Dataset.
+Optional label_mapper lets you remap tag schema before training (important for CoNLL → CrossNER compatibility)
+'''
+
+
 import torch
 from src.utils.label_mapping import (
     conll_to_crossner,

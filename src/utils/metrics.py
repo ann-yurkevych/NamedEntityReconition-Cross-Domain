@@ -1,3 +1,8 @@
+'''
+Has a compute_metrics helper similar to evaluator.
+Currently has issues (uses save_path/json without defining/importing them), and it is not the active evaluation path in run_experiment.
+'''
+
 from seqeval.metrics import classification_report, f1_score
 
 def compute_metrics(preds, labels, id2label):
