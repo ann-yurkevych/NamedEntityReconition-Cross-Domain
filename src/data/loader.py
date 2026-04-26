@@ -18,6 +18,18 @@ def load_unlabeled(data_dir: str, domain: str, variants: list[str] | None = None
     texts: list[str] = []
 
     for variant in variants:
+        '''
+        Removes leading/trailing whitespace
+        Skips empty lines
+        Appends each remaining line as a full string
+        
+        Example Output: [
+        "The International became a significant political force , and Karl Marx a leading figure and a member of its General Council .",
+        "In the Spanish Civil War , anarchists and syndicalists ( CNT and Federación Anarquista Ibérica ) once again allied themselves with various currents of leftists .",
+        "In response to the army rebellion , an anarchist-inspired movement of peasants and workers , supported by armed militias , took control of Barcelona and of large areas of rural Spain where they collectivised the land ."
+        ]
+        --> This is suitable for domain-adaptive pretraining inputs!!!!!!!!!
+        '''
         fname = domain_dir / f"{domain}_{variant}.txt"
         if not fname.exists():
             continue
@@ -31,6 +43,26 @@ def load_unlabeled(data_dir: str, domain: str, variants: list[str] | None = None
 
 
 def read_conll_format(path):
+    '''
+    Example output:
+    texts = [
+    ["SOCCER", "-", "JAPAN", "GET", "LUCKY", "WIN", ",",
+    "CHINA", "IN", "SURPRISE", "DEFEAT", "."],
+
+    ["Nadim", "Ladki"],
+
+    ["AL-AIN", ",", "United", "Arab", "Emirates", "1996-12-06"]
+    ]
+    
+    labels = [
+    ["O", "O", "B-LOC", "O", "O", "O", "O",
+    "B-PER", "O", "O", "O", "O"],
+
+    ["B-PER", "I-PER"],
+
+    ["B-LOC", "O", "B-LOC", "I-LOC", "I-LOC", "O"]
+    ]
+    '''
     texts = []
     labels = []
 

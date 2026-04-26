@@ -78,18 +78,19 @@ def save_metrics(f1, report, config, preds=None, refs=None):
         print(f"[Saved raw predictions to {preds_filename}]")
 
 def run(config):
-    tokenizer = AutoTokenizer.from_pretrained(config["model_name"])
+    tokenizer = AutoTokenizer.from_pretrained(config["model_name"]) # use HuggingFace tokenizer BERT
 
     # Example label space (should be unified beforehand)
     label_list = config["labels"]
-    label2id = {l: i for i, l in enumerate(label_list)}
+    label2id = {l: i for i, l in enumerate(label_list)} # defines a global label space - important for CrossNER and CoNLL alignment 
     id2label = {i: l for l, i in label2id.items()}
     # Give O a lower weight so the model is penalized more for missing entities
     label_weights = torch.ones(len(label_list))
-    label_weights[label2id["O"]] = 0.1
+    label_weights[label2id["O"]] = 0.1 # downweight O so missing entities is penalized more than false positives -  "weighting trick"
     label_weights = label_weights.to(DEVICE)
+    # later we plug it into: CrossEntropyLoss(weight=label_weights)
 
-    model = BertForNER(config["model_name"], len(label_list)).to(DEVICE)
+    model = BertForNER(config["model_name"], len(label_list)).to(DEVICE) #BertForNER → encoder + token classification head
     optimizer = optim.AdamW(model.parameters(), lr=5e-5)
     trainer = Trainer(model, optimizer, DEVICE, label_weights=label_weights)
 

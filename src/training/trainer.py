@@ -31,7 +31,7 @@ class Trainer:
                 attention_mask = batch["attention_mask"].to(self.device)
                 labels = batch["labels"].to(self.device)
 
-                logits = self.model(input_ids, attention_mask)
+                logits = self.model(input_ids, attention_mask) # forward pass
                 loss = self.loss_fn(
                     logits.view(-1, logits.shape[-1]),
                     labels.view(-1)
@@ -42,27 +42,27 @@ class Trainer:
                 self.optimizer.step()
                 epoch_loss += loss.item()
 
-            avg = epoch_loss / len(dataloader)
+            avg = epoch_loss / len(dataloader) # prints epoch-average loss and accumulates it.
             print(f"Epoch {epoch+1} loss: {avg:.4f}")
             total_loss += avg
 
-        return total_loss / epochs
+        return total_loss / epochs # returns average loss across epochs.
 
     def evaluate(self, dataloader):
-        self.model.eval()
+        self.model.eval() # dropout off, no backprop, etc.
         preds, refs = [], []
 
-        with torch.no_grad():
+        with torch.no_grad(): # no grad for efficent inference
             for batch in tqdm(dataloader):
                 input_ids = batch["input_ids"].to(self.device)
                 attention_mask = batch["attention_mask"].to(self.device)
                 labels = batch["labels"].to(self.device)
 
-                logits = self.model(input_ids, attention_mask)
+                logits = self.model(input_ids, attention_mask) # forward pass then argmax over label dimension.
                 predictions = torch.argmax(logits, dim=-1)
 
                 # Extend as lists of lists, not flat arrays
                 preds.extend(predictions.cpu().numpy().tolist())
                 refs.extend(labels.cpu().numpy().tolist())
 
-        return preds, refs
+        return preds, refs # returns raw integer predictions and references.
