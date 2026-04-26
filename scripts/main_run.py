@@ -132,36 +132,8 @@ def run(config):
         trainer.train(train_loader, epochs=15)
         preds, refs = trainer.evaluate(test_loader)
 
-    # elif config["mode"] == "transfer":
-    #     '''
-    #     3. Transfer (CoNLL --> CrossNER)
-    #     '''
-    #     # Step 1: train on CoNLL
-    #     texts, labels = load_conll2003(config["data_dir"])
-    #     train_loader = build_dataloader(
-    #         texts, labels, tokenizer, label2id, label_mapper=map_conll_to_politics
-    #     )
-    #     trainer.train(train_loader)
-
-    #     # Save CoNLL-finetuned model so DAPT mode can reuse its tokenizer
-    #     conll_save_path = "results/models/bert-conll-politics"
-    #     os.makedirs(conll_save_path, exist_ok=True)
-    #     model.bert.save_pretrained(conll_save_path)
-    #     tokenizer.save_pretrained(conll_save_path)
-    #     print(f"[CoNLL-finetuned encoder saved to {conll_save_path}]")
-
-    #     # Step 2: finetune on CrossNER politics
-    #     (train_texts, train_labels), _, (test_texts, test_labels) = load_crossner(
-    #         config["data_dir"], config["domain"]
-    #     )
-    #     train_loader = build_dataloader(train_texts, train_labels, tokenizer, label2id)
-    #     test_loader = build_dataloader(test_texts, test_labels, tokenizer, label2id)
-    #     trainer.train(train_loader)
-    #     preds, refs = trainer.evaluate(test_loader)
-
-
     elif config["mode"] == "transfer":
-    # Step 1: train on CoNLL (FEWER epochs to avoid collapse)
+    #  train on CoNLL
         texts, labels = load_conll2003(config["data_dir"])
         train_loader = build_dataloader(
             texts, labels, tokenizer, label2id, label_mapper=map_conll_to_politics
@@ -175,13 +147,13 @@ def run(config):
         tokenizer.save_pretrained(conll_save_path)
         print(f"[CoNLL-finetuned encoder saved to {conll_save_path}]")
 
-        # Step 2: finetune on CrossNER politics (MORE epochs to recover)
+        # finetune on CrossNER politics
         (train_texts, train_labels), _, (test_texts, test_labels) = load_crossner(
             config["data_dir"], config["domain"]
         )
         train_loader = build_dataloader(train_texts, train_labels, tokenizer, label2id)
         test_loader = build_dataloader(test_texts, test_labels, tokenizer, label2id)
-        trainer.train(train_loader, epochs=15)   # was default 5, now 15
+        trainer.train(train_loader, epochs=15)
         preds, refs = trainer.evaluate(test_loader)
 
     elif config["mode"] == "dapt":
@@ -228,16 +200,4 @@ if __name__ == "__main__":
     }
 
     run(config)
-
-    
-    
-
-'''
-4. BERT + DAPT
-
-Pipeline:
-Step 1: LM pretraining on domain corpus
-Step 2: Load weights
-Step 3: Train on CrossNER
-'''
 
