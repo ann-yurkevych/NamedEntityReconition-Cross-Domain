@@ -48,12 +48,24 @@ def build_entity_confusion_matrix(
     return matrix, labels
 
 
-def ids_to_bio(id_seqs: List[List[int]], id2label: Dict[int, str]) -> List[List[str]]:
-    """Convert integer ID sequences to BIO strings, skipping ignored positions."""
-    out = []
-    for seq in id_seqs:
-        out.append([id2label[i] for i in seq if i in id2label])
-    return out
+def ids_to_bio(pred_id_seqs, ref_id_seqs, id2label):
+    """
+    Convert integer ID sequences to BIO strings.
+    Drops positions where ref == -100 (subword continuations / special tokens)
+    from BOTH preds and refs to maintain alignment.
+    Returns (pred_bio_seqs, ref_bio_seqs).
+    """
+    pred_out, ref_out = [], []
+    for p_seq, r_seq in zip(pred_id_seqs, ref_id_seqs):
+        p_bio, r_bio = [], []
+        for p, r in zip(p_seq, r_seq):
+            if r == -100:
+                continue
+            p_bio.append(id2label.get(p, "O"))
+            r_bio.append(id2label.get(r, "O"))
+        pred_out.append(p_bio)
+        ref_out.append(r_bio)
+    return pred_out, ref_out
 
 
 def highlight_hierarchy_confusions(

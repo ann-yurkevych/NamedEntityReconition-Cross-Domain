@@ -43,10 +43,14 @@ else:
 print(f"[Using device: {DEVICE}]")
 
 def build_dataloader(texts, labels, tokenizer, label2id, batch_size=16, label_mapper=None):
+
+    if label_mapper is not None:
+        labels = [label_mapper(seq) for seq in labels]
+
     encodings, aligned_labels = tokenize_and_align_labels(
-        texts, labels, tokenizer, label2id
-    )
-    dataset = NERDataset(encodings, aligned_labels, label_mapper=label_mapper)
+            texts, labels, tokenizer, label2id
+        )
+    dataset = NERDataset(encodings, aligned_labels, label_mapper=None)
     return DataLoader(dataset, batch_size=batch_size, shuffle=True)
 
 def save_metrics(f1, report, config, preds=None, refs=None):
@@ -84,15 +88,10 @@ def run(config):
     label_list = config["labels"]
     label2id = {l: i for i, l in enumerate(label_list)} # defines a global label space - important for CrossNER and CoNLL alignment 
     id2label = {i: l for l, i in label2id.items()}
-    # Give O a lower weight so the model is penalized more for missing entities
-    label_weights = torch.ones(len(label_list))
-    label_weights[label2id["O"]] = 0.1 # downweight O so missing entities is penalized more than false positives -  "weighting trick"
-    label_weights = label_weights.to(DEVICE)
-    # later we plug it into: CrossEntropyLoss(weight=label_weights)
 
     model = BertForNER(config["model_name"], len(label_list)).to(DEVICE) #BertForNER → encoder + token classification head
     optimizer = optim.AdamW(model.parameters(), lr=5e-5)
-    trainer = Trainer(model, optimizer, DEVICE, label_weights=label_weights)
+    trainer = Trainer(model, optimizer, DEVICE, label_weights=None)
 
     if config["mode"] == "zero_shot":
         '''
@@ -130,34 +129,59 @@ def run(config):
         train_loader = build_dataloader(train_texts, train_labels, tokenizer, label2id)
         test_loader = build_dataloader(test_texts, test_labels, tokenizer, label2id)
 
-        trainer.train(train_loader)
+        trainer.train(train_loader, epochs=15)
         preds, refs = trainer.evaluate(test_loader)
 
+    # elif config["mode"] == "transfer":
+    #     '''
+    #     3. Transfer (CoNLL --> CrossNER)
+    #     '''
+    #     # Step 1: train on CoNLL
+    #     texts, labels = load_conll2003(config["data_dir"])
+    #     train_loader = build_dataloader(
+    #         texts, labels, tokenizer, label2id, label_mapper=map_conll_to_politics
+    #     )
+    #     trainer.train(train_loader)
+
+    #     # Save CoNLL-finetuned model so DAPT mode can reuse its tokenizer
+    #     conll_save_path = "results/models/bert-conll-politics"
+    #     os.makedirs(conll_save_path, exist_ok=True)
+    #     model.bert.save_pretrained(conll_save_path)
+    #     tokenizer.save_pretrained(conll_save_path)
+    #     print(f"[CoNLL-finetuned encoder saved to {conll_save_path}]")
+
+    #     # Step 2: finetune on CrossNER politics
+    #     (train_texts, train_labels), _, (test_texts, test_labels) = load_crossner(
+    #         config["data_dir"], config["domain"]
+    #     )
+    #     train_loader = build_dataloader(train_texts, train_labels, tokenizer, label2id)
+    #     test_loader = build_dataloader(test_texts, test_labels, tokenizer, label2id)
+    #     trainer.train(train_loader)
+    #     preds, refs = trainer.evaluate(test_loader)
+
+
     elif config["mode"] == "transfer":
-        '''
-        3. Transfer (CoNLL --> CrossNER)
-        '''
-        # Step 1: train on CoNLL
+    # Step 1: train on CoNLL (FEWER epochs to avoid collapse)
         texts, labels = load_conll2003(config["data_dir"])
         train_loader = build_dataloader(
             texts, labels, tokenizer, label2id, label_mapper=map_conll_to_politics
         )
-        trainer.train(train_loader)
+        trainer.train(train_loader, epochs=2)
 
-        # Save CoNLL-finetuned model so DAPT mode can reuse its tokenizer
+        # Save CoNLL-finetuned encoder
         conll_save_path = "results/models/bert-conll-politics"
         os.makedirs(conll_save_path, exist_ok=True)
         model.bert.save_pretrained(conll_save_path)
         tokenizer.save_pretrained(conll_save_path)
         print(f"[CoNLL-finetuned encoder saved to {conll_save_path}]")
 
-        # Step 2: finetune on CrossNER politics
+        # Step 2: finetune on CrossNER politics (MORE epochs to recover)
         (train_texts, train_labels), _, (test_texts, test_labels) = load_crossner(
             config["data_dir"], config["domain"]
         )
         train_loader = build_dataloader(train_texts, train_labels, tokenizer, label2id)
         test_loader = build_dataloader(test_texts, test_labels, tokenizer, label2id)
-        trainer.train(train_loader)
+        trainer.train(train_loader, epochs=15)   # was default 5, now 15
         preds, refs = trainer.evaluate(test_loader)
 
     elif config["mode"] == "dapt":
@@ -173,7 +197,7 @@ def run(config):
         tokenizer = AutoTokenizer.from_pretrained(config["conll_model_path"])
         model = BertForNER(config["dapt_model_path"], len(label_list)).to(DEVICE)
         optimizer = optim.AdamW(model.parameters(), lr=5e-5) 
-        trainer = Trainer(model, optimizer, DEVICE, label_weights=label_weights)
+        trainer = Trainer(model, optimizer, DEVICE, label_weights=None)
 
         (train_texts, train_labels), _, (test_texts, test_labels) = load_crossner(
             config["data_dir"], config["domain"]
@@ -182,7 +206,7 @@ def run(config):
         train_loader = build_dataloader(train_texts, train_labels, tokenizer, label2id)
         test_loader = build_dataloader(test_texts, test_labels, tokenizer, label2id)
 
-        trainer.train(train_loader)
+        trainer.train(train_loader, epochs=15)
         preds, refs = trainer.evaluate(test_loader)
 
     evaluator = Evaluator(id2label)
@@ -197,7 +221,7 @@ if __name__ == "__main__":
         "model_name": "bert-base-cased",
         "data_dir": "data/raw",
         "domain": "politics",
-        "mode": "crossner", # change to: crossner, zero_shot, transfer, dapt
+        "mode": "dapt", # change to: crossner, transfer, dapt
         "labels": get_crossner_labels(),
         "dapt_model_path": "results/models/bert-dapt-politics",
         "conll_model_path": "results/models/bert-conll-politics",
