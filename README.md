@@ -28,6 +28,13 @@ conda env create -f environment.yml   # create the environment (once)
 conda activate crossner               # activate it (every session)
 ```
 
+If running into problems try creating another env with python 3.11
+```bash
+conda create -n crossner311 python=3.11
+conda activate crossner311
+pip install -r requirements.txt
+```
+
 To verify it worked:
 
 ```bash
