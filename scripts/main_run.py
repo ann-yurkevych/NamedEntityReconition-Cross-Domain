@@ -42,7 +42,15 @@ else:
     DEVICE = torch.device("cpu")
 print(f"[Using device: {DEVICE}]")
 
-def build_dataloader(texts, labels, tokenizer, label2id, batch_size=16, label_mapper=None):
+def build_dataloader(
+    texts,
+    labels,
+    tokenizer,
+    label2id,
+    batch_size=16,
+    label_mapper=None,
+    shuffle=True,
+):
 
     if label_mapper is not None:
         labels = [label_mapper(seq) for seq in labels]
@@ -51,9 +59,9 @@ def build_dataloader(texts, labels, tokenizer, label2id, batch_size=16, label_ma
             texts, labels, tokenizer, label2id
         )
     dataset = NERDataset(encodings, aligned_labels, label_mapper=None)
-    return DataLoader(dataset, batch_size=batch_size, shuffle=True)
+    return DataLoader(dataset, batch_size=batch_size, shuffle=shuffle)
 
-def save_metrics(f1, report, config, preds=None, refs=None):
+def save_metrics(f1, report, config, preds=None, refs=None, texts=None, labels=None):
     os.makedirs("results/metrics", exist_ok=True)
 
     filename = f"results/metrics/run_{datetime.now().strftime('%Y%m%d_%H%M%S')}.json"
@@ -75,10 +83,12 @@ def save_metrics(f1, report, config, preds=None, refs=None):
         with open(preds_filename, "w") as f:
             preds_list = [list(map(int, p)) for p in preds]
             refs_list = [list(map(int, r)) for r in refs]
-            json.dump(
-                {"preds": preds_list, "refs": refs_list, "mode": config["mode"]},
-                f,
-            )
+            payload = {"preds": preds_list, "refs": refs_list, "mode": config["mode"]}
+            if texts is not None:
+                payload["texts"] = [" ".join(sentence) for sentence in texts]
+            if labels is not None:
+                payload["gold_labels"] = labels
+            json.dump(payload, f)
         print(f"[Saved raw predictions to {preds_filename}]")
 
 def run(config):
@@ -103,14 +113,14 @@ def run(config):
         No finetuning
         '''
         texts, labels = load_conll2003(config["data_dir"])
-        train_loader = build_dataloader(texts, labels, tokenizer, label2id, label_mapper=map_conll_to_politics)
+        train_loader = build_dataloader(texts, labels, tokenizer, label2id, label_mapper=map_conll_to_politics, shuffle=True)
 
         trainer.train(train_loader, epochs=5)
 
         (test_texts, test_labels), _, _ = load_crossner(
             config["data_dir"], config["domain"]
         )
-        test_loader = build_dataloader(test_texts, test_labels, tokenizer, label2id, label_mapper=None)
+        test_loader = build_dataloader(test_texts, test_labels, tokenizer, label2id, label_mapper=None, shuffle=False)
 
         preds, refs = trainer.evaluate(test_loader)
 
@@ -126,8 +136,8 @@ def run(config):
             config["data_dir"], config["domain"]
         )
 
-        train_loader = build_dataloader(train_texts, train_labels, tokenizer, label2id)
-        test_loader = build_dataloader(test_texts, test_labels, tokenizer, label2id)
+        train_loader = build_dataloader(train_texts, train_labels, tokenizer, label2id, shuffle=True)
+        test_loader = build_dataloader(test_texts, test_labels, tokenizer, label2id, shuffle=False)
 
         trainer.train(train_loader, epochs=15)
         preds, refs = trainer.evaluate(test_loader)
@@ -136,7 +146,7 @@ def run(config):
     #  train on CoNLL
         texts, labels = load_conll2003(config["data_dir"])
         train_loader = build_dataloader(
-            texts, labels, tokenizer, label2id, label_mapper=map_conll_to_politics
+            texts, labels, tokenizer, label2id, label_mapper=map_conll_to_politics, shuffle=True
         )
         trainer.train(train_loader, epochs=2)
 
@@ -151,8 +161,8 @@ def run(config):
         (train_texts, train_labels), _, (test_texts, test_labels) = load_crossner(
             config["data_dir"], config["domain"]
         )
-        train_loader = build_dataloader(train_texts, train_labels, tokenizer, label2id)
-        test_loader = build_dataloader(test_texts, test_labels, tokenizer, label2id)
+        train_loader = build_dataloader(train_texts, train_labels, tokenizer, label2id, shuffle=True)
+        test_loader = build_dataloader(test_texts, test_labels, tokenizer, label2id, shuffle=False)
         trainer.train(train_loader, epochs=15)
         preds, refs = trainer.evaluate(test_loader)
 
@@ -175,8 +185,8 @@ def run(config):
             config["data_dir"], config["domain"]
         )
 
-        train_loader = build_dataloader(train_texts, train_labels, tokenizer, label2id)
-        test_loader = build_dataloader(test_texts, test_labels, tokenizer, label2id)
+        train_loader = build_dataloader(train_texts, train_labels, tokenizer, label2id, shuffle=True)
+        test_loader = build_dataloader(test_texts, test_labels, tokenizer, label2id, shuffle=False)
 
         trainer.train(train_loader, epochs=15)
         preds, refs = trainer.evaluate(test_loader)
@@ -185,7 +195,7 @@ def run(config):
     f1, report = evaluator.evaluate(preds, refs)
     print("F1:", f1)
     print(report)
-    save_metrics(f1, report, config, preds=preds, refs=refs)
+    save_metrics(f1, report, config, preds=preds, refs=refs, texts=test_texts, labels=test_labels)
 
 
 if __name__ == "__main__":
@@ -193,7 +203,7 @@ if __name__ == "__main__":
         "model_name": "bert-base-cased",
         "data_dir": "data/raw",
         "domain": "politics",
-        "mode": "dapt", # change to: crossner, transfer, dapt
+        "mode": "transfer", # change to: crossner, transfer, dapt
         "labels": get_crossner_labels(),
         "dapt_model_path": "results/models/bert-dapt-politics",
         "conll_model_path": "results/models/bert-conll-politics",

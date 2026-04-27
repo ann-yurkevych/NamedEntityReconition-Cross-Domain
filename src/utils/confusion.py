@@ -81,3 +81,13 @@ def highlight_hierarchy_confusions(
             count = int(matrix[label2idx[fine], label2idx[coarse]])
             result[f"{fine} -> {coarse}"] = count
     return result
+
+'''
+What does highlight_hierarchy_confusions tell us?
+
+This pipeline lets you distinguish what the error type is and what it means:
+
+ORG → LOC  :   confusion between entity types
+LOC → O    :   missed entity
+O → LOC    :   hallucinated entity
+'''

@@ -51,14 +51,17 @@ FINEGRAINED: set[str] = {"politician", "politicalparty", "country", "event", "el
 
 
 def are_hierarchically_related(pred_label: str, gold_label: str) -> bool:
-    """Check if pred and gold labels share a parent category."""
+    """
+    Check if pred and gold labels share a parent category. - but they don't have to necessarily share the same fine label
+    --> useful for analyzing near-miss errors
+    """
     parent_pred = CROSSNER_TO_PARENT.get(pred_label, pred_label)
     parent_gold = CROSSNER_TO_PARENT.get(gold_label, gold_label)
     return parent_pred == parent_gold and pred_label != gold_label
 
 
 def is_finegrained(label: str) -> bool:
-    return label in FINEGRAINED
+    return label in FINEGRAINED #Returns whether label belongs to the fine-only set.
 
 
 # ---------------------------------------------------------------------------
@@ -69,7 +72,7 @@ def _map_tag(tag: str, mapping: dict[str, str]) -> str:
     if tag == "O":
         return "O"
     prefix, etype = tag.split("-", 1)
-    return f"{prefix}-{mapping.get(etype.lower(), etype)}"
+    return f"{prefix}-{mapping.get(etype.lower(), etype)}" #Preserves BIO prefix (B or I), remaps entity type., O stays O
 
 
 def collapse_to_coarse(tags: list[str]) -> list[str]:
