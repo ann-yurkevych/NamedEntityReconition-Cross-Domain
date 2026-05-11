@@ -144,11 +144,12 @@ def run(config):
 
     elif config["mode"] == "transfer":
     #  train on CoNLL
+    # 3. BERT + transfer learning (CoNLL --> CrossNER)
         texts, labels = load_conll2003(config["data_dir"])
         train_loader = build_dataloader(
             texts, labels, tokenizer, label2id, label_mapper=map_conll_to_politics, shuffle=True
         )
-        trainer.train(train_loader, epochs=2)
+        trainer.train(train_loader, epochs=3)
 
         # Save CoNLL-finetuned encoder
         conll_save_path = "results/models/bert-conll-politics"
@@ -165,10 +166,68 @@ def run(config):
         test_loader = build_dataloader(test_texts, test_labels, tokenizer, label2id, shuffle=False)
         trainer.train(train_loader, epochs=15)
         preds, refs = trainer.evaluate(test_loader)
+        
+    elif config["mode"] == "jointly_train":
+        '''
+        4. BERT (Jointly Train on Both Source and Target Domains)
+
+        Pipeline:
+        Train: CoNLL2003 + CrossNER politics simultaneously
+        Test: CrossNER politics
+        
+        Following the paper: upsample CrossNER target domain data 
+        to balance source and target domain data samples.
+        '''
+        # Load both datasets
+        conll_texts, conll_labels = load_conll2003(config["data_dir"])
+        (train_texts, train_labels), _, (test_texts, test_labels) = load_crossner(
+            config["data_dir"], config["domain"]
+        )
+
+        # Map CoNLL labels to CrossNER politics label space
+        conll_labels_mapped = [map_conll_to_politics(seq) for seq in conll_labels]
+
+        # Upsample CrossNER to match CoNLL size (as described in the paper)
+        crossner_size = len(train_texts)
+        conll_size = len(conll_texts)
+
+        upsample_factor = conll_size // crossner_size
+        remainder = conll_size % crossner_size
+
+        upsampled_texts = train_texts * upsample_factor + train_texts[:remainder]
+        upsampled_labels = train_labels * upsample_factor + train_labels[:remainder]
+
+        print(f"[CoNLL size: {conll_size}, CrossNER size: {crossner_size}, "
+            f"Upsampled CrossNER size: {len(upsampled_texts)}]")
+
+        # Combine CoNLL and upsampled CrossNER
+        combined_texts = conll_texts + upsampled_texts
+        combined_labels = conll_labels_mapped + upsampled_labels
+
+        # Shuffle combined dataset by creating paired list
+        combined = list(zip(combined_texts, combined_labels))
+        import random
+        random.seed(42)
+        random.shuffle(combined)
+        combined_texts, combined_labels = zip(*combined)
+        combined_texts = list(combined_texts)
+        combined_labels = list(combined_labels)
+
+        train_loader = build_dataloader(
+            combined_texts, combined_labels, tokenizer, label2id,
+            label_mapper=None, shuffle=True
+        )
+        test_loader = build_dataloader(
+            test_texts, test_labels, tokenizer, label2id,
+            label_mapper=None, shuffle=False
+        )
+
+        trainer.train(train_loader, epochs=15)
+        preds, refs = trainer.evaluate(test_loader)
 
     elif config["mode"] == "dapt":
         '''
-        4. BERT + DAPT (domain-adapted BERT --> CrossNER)
+        5. BERT + DAPT (domain-adapted BERT --> CrossNER)
 
         Pipeline:
         Step 1: MLM pretraining on domain corpus (run separately via run_dapt.py)
@@ -203,7 +262,7 @@ if __name__ == "__main__":
         "model_name": "bert-base-cased",
         "data_dir": "data/raw",
         "domain": "politics",
-        "mode": "transfer", # change to: crossner, transfer, dapt
+        "mode": "transfer", # change to: crossner, transfer, jointly_train, dapt
         "labels": get_crossner_labels(),
         "dapt_model_path": "results/models/bert-dapt-politics",
         "conll_model_path": "results/models/bert-conll-politics",
