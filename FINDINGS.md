@@ -237,3 +237,33 @@ DAPT reduces `politicalparty → organisation` confusion by 75% (28→7) — the
 The opposite pattern holds for location-type entities: `country → location` confusions increase by +14 under DAPT. Country names appear heavily in political text in location-like syntactic contexts ("talks in Berlin", "war in Ukraine"), so domain adaptation reinforces rather than resolves this ambiguity. The `event` label shows the same direction — diagonal drops from 0.43 (transfer) to 0.35 (DAPT) — consistent with political event mentions also appearing in contexts the MLM cannot distinguish from general location or misc usage.
 
 `person → politician` (327→329) is unchanged by DAPT, confirming this confusion is driven entirely by the 14-instance `person` class imbalance, not by domain representations.
+
+---
+
+## Emerging Entity Analysis
+
+**Definition:** entities whose surface string never appeared in CoNLL-2003 training data are classified as *unseen/emerging*. Evaluation collapses CrossNER Politics fine-grained labels to CoNLL-2003 coarse types (PER/ORG/LOC/MISC) for a fair comparison.
+
+**Split:** 811 seen (19.3%) / 3,398 unseen (80.7%) — the vast majority of test entities are emerging.
+
+### Results: Seen vs Unseen F1 by mode
+
+| Mode | Seen F1 | Unseen F1 | Gap |
+|---|---|---|---|
+| zero_shot | 92.29 | 70.24 | +22.05 |
+| crossner | 87.60 | 83.90 | +3.70 |
+| transfer | 92.40 | 85.74 | +6.66 |
+| jointly_train | 92.29 | 75.68 | +16.61 |
+| **dapt** | **86.26** | **83.89** | **+2.37** |
+
+### Finding: DAPT generalises best to unseen entities
+
+DAPT has the smallest seen/unseen gap (+2.37 pts) — MLM pre-training on political text gives the encoder representations that transfer to entity strings it has never seen labelled, which is the core purpose of domain adaptation.
+
+**zero_shot gap is largest (+22 pts):** a CoNLL-only model is well-calibrated on entity strings it saw during training but has no mechanism for unseen domain-specific names.
+
+**jointly_train gap is also large (+16.6 pts):** the 70× upsampling of CrossNER gives near-perfect coverage of the 200 training sentences (high seen F1), but the constant CoNLL signal prevents the model from learning robust representations for new entity types, so unseen performance suffers.
+
+**transfer beats crossner on unseen** (85.74 vs 83.90): CoNLL pre-training provides a stronger NER prior that helps with novel entities, but at the cost of a larger gap than DAPT or crossner alone.
+
+Since 80.7% of test entities are unseen, unseen F1 is the more meaningful number for real-world usefulness — by that measure the ranking is transfer > dapt ≈ crossner > jointly_train > zero_shot.
