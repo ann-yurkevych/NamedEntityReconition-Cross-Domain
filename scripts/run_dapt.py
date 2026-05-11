@@ -14,7 +14,7 @@ from datasets import load_dataset
 @dataclass
 class DataCollatorForSpanLanguageModeling:
     tokenizer: PreTrainedTokenizer
-    mlm_probability: float = 0.20
+    mlm_probability: float = 0.15
 
     def __call__(self, examples):
         input_ids = torch.tensor([e["input_ids"] for e in examples], dtype=torch.long)
@@ -43,12 +43,20 @@ class DataCollatorForSpanLanguageModeling:
             record_index = -1
             for j, value in enumerate(line):
                 if value:
+                    # If this token is already adjacent to a previously masked token,
+                    # it already satisfies span-level masking -> leave it alone
+                    if j != 0 and masked_indices[i][j - 1]:
+                        record_index = -1  # reset, this span is already continuous
+                        continue
+
                     if record_index == -1:
-                        if j != 0 and masked_indices[i][j - 1]:
-                            continue
+                        # First isolated masked token found, remember it
                         record_index = j
                     else:
+                        # We have two isolated masked tokens (record_index and j)
+                        # Move record_index token to sit next to j
                         if record_index == j - 1:
+                            # They are already adjacent, leave them alone
                             record_index = -1
                             continue
                         masked_indices[i][record_index] = False
@@ -107,7 +115,7 @@ def main():
     split = lm_dataset["train"].train_test_split(test_size=0.005, seed=42)
 
     collator = DataCollatorForSpanLanguageModeling(
-        tokenizer=tokenizer, mlm_probability=0.20
+        tokenizer=tokenizer, mlm_probability=0.15
     )
 
     training_args = TrainingArguments(
