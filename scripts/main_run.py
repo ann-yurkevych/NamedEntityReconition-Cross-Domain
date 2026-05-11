@@ -61,7 +61,8 @@ def build_dataloader(
     dataset = NERDataset(encodings, aligned_labels, label_mapper=None)
     return DataLoader(dataset, batch_size=batch_size, shuffle=shuffle)
 
-def save_metrics(f1, report, config, preds=None, refs=None, texts=None, labels=None):
+def save_metrics(f1, report, config, preds=None, refs=None, texts=None, labels=None,
+                 dev_f1=None, dev_report=None):
     os.makedirs("results/metrics", exist_ok=True)
 
     filename = f"results/metrics/run_{datetime.now().strftime('%Y%m%d_%H%M%S')}.json"
@@ -69,8 +70,11 @@ def save_metrics(f1, report, config, preds=None, refs=None, texts=None, labels=N
     output = {
         "f1": float(f1),
         "config": config,
-        "report": report
+        "report": report,
     }
+    if dev_f1 is not None:
+        output["dev_f1"] = float(dev_f1)
+        output["dev_report"] = dev_report
 
     with open(filename, "w") as f:
         json.dump(output, f, indent=2)
@@ -117,11 +121,13 @@ def run(config):
 
         trainer.train(train_loader, epochs=5)
 
-        (test_texts, test_labels), _, _ = load_crossner(
+        _, (dev_texts, dev_labels), (test_texts, test_labels) = load_crossner(
             config["data_dir"], config["domain"]
         )
+        dev_loader  = build_dataloader(dev_texts,  dev_labels,  tokenizer, label2id, label_mapper=None, shuffle=False)
         test_loader = build_dataloader(test_texts, test_labels, tokenizer, label2id, label_mapper=None, shuffle=False)
 
+        dev_preds,  dev_refs  = trainer.evaluate(dev_loader)
         preds, refs = trainer.evaluate(test_loader)
 
     elif config["mode"] == "crossner":
@@ -132,14 +138,16 @@ def run(config):
         Train: CrossNER
         Test: CrossNER
         '''
-        (train_texts, train_labels), _, (test_texts, test_labels) = load_crossner(
+        (train_texts, train_labels), (dev_texts, dev_labels), (test_texts, test_labels) = load_crossner(
             config["data_dir"], config["domain"]
         )
 
         train_loader = build_dataloader(train_texts, train_labels, tokenizer, label2id, shuffle=True)
-        test_loader = build_dataloader(test_texts, test_labels, tokenizer, label2id, shuffle=False)
+        dev_loader   = build_dataloader(dev_texts,   dev_labels,   tokenizer, label2id, shuffle=False)
+        test_loader  = build_dataloader(test_texts,  test_labels,  tokenizer, label2id, shuffle=False)
 
         trainer.train(train_loader, epochs=15)
+        dev_preds,  dev_refs  = trainer.evaluate(dev_loader)
         preds, refs = trainer.evaluate(test_loader)
 
     elif config["mode"] == "transfer":
@@ -159,12 +167,73 @@ def run(config):
         print(f"[CoNLL-finetuned encoder saved to {conll_save_path}]")
 
         # finetune on CrossNER politics
-        (train_texts, train_labels), _, (test_texts, test_labels) = load_crossner(
+        (train_texts, train_labels), (dev_texts, dev_labels), (test_texts, test_labels) = load_crossner(
             config["data_dir"], config["domain"]
         )
         train_loader = build_dataloader(train_texts, train_labels, tokenizer, label2id, shuffle=True)
-        test_loader = build_dataloader(test_texts, test_labels, tokenizer, label2id, shuffle=False)
+        dev_loader   = build_dataloader(dev_texts,   dev_labels,   tokenizer, label2id, shuffle=False)
+        test_loader  = build_dataloader(test_texts,  test_labels,  tokenizer, label2id, shuffle=False)
         trainer.train(train_loader, epochs=15)
+        dev_preds,  dev_refs  = trainer.evaluate(dev_loader)
+        preds, refs = trainer.evaluate(test_loader)
+        
+    elif config["mode"] == "jointly_train":
+        '''
+        4. BERT (Jointly Train on Both Source and Target Domains)
+
+        Pipeline:
+        Train: CoNLL2003 + CrossNER politics simultaneously
+        Test: CrossNER politics
+        
+        Following the paper: upsample CrossNER target domain data 
+        to balance source and target domain data samples.
+        '''
+        # Load both datasets
+        conll_texts, conll_labels = load_conll2003(config["data_dir"])
+        (train_texts, train_labels), _, (test_texts, test_labels) = load_crossner(
+            config["data_dir"], config["domain"]
+        )
+
+        # Map CoNLL labels to CrossNER politics label space
+        conll_labels_mapped = [map_conll_to_politics(seq) for seq in conll_labels]
+
+        # Upsample CrossNER to match CoNLL size (as described in the paper)
+        crossner_size = len(train_texts)
+        conll_size = len(conll_texts)
+
+        upsample_factor = conll_size // crossner_size
+        remainder = conll_size % crossner_size
+
+        upsampled_texts = train_texts * upsample_factor + train_texts[:remainder]
+        upsampled_labels = train_labels * upsample_factor + train_labels[:remainder]
+
+        print(f"[CoNLL size: {conll_size}, CrossNER size: {crossner_size}, "
+            f"Upsampled CrossNER size: {len(upsampled_texts)}]")
+
+        # Combine CoNLL and upsampled CrossNER
+        combined_texts = conll_texts + upsampled_texts
+        combined_labels = conll_labels_mapped + upsampled_labels
+
+        # Shuffle combined dataset by creating paired list
+        combined = list(zip(combined_texts, combined_labels))
+        import random
+        random.seed(42)
+        random.shuffle(combined)
+        combined_texts, combined_labels = zip(*combined)
+        combined_texts = list(combined_texts)
+        combined_labels = list(combined_labels)
+
+        train_loader = build_dataloader(
+            combined_texts, combined_labels, tokenizer, label2id,
+            label_mapper=None, shuffle=True
+        )
+        test_loader = build_dataloader(
+            test_texts, test_labels, tokenizer, label2id,
+            label_mapper=None, shuffle=False
+        )
+
+        trainer.train(train_loader, epochs=15)
+        dev_preds,  dev_refs  = trainer.evaluate(dev_loader)
         preds, refs = trainer.evaluate(test_loader)
         
     elif config["mode"] == "jointly_train":
@@ -240,21 +309,32 @@ def run(config):
         optimizer = optim.AdamW(model.parameters(), lr=5e-5) 
         trainer = Trainer(model, optimizer, DEVICE, label_weights=None)
 
-        (train_texts, train_labels), _, (test_texts, test_labels) = load_crossner(
+        (train_texts, train_labels), (dev_texts, dev_labels), (test_texts, test_labels) = load_crossner(
             config["data_dir"], config["domain"]
         )
 
         train_loader = build_dataloader(train_texts, train_labels, tokenizer, label2id, shuffle=True)
-        test_loader = build_dataloader(test_texts, test_labels, tokenizer, label2id, shuffle=False)
+        dev_loader   = build_dataloader(dev_texts,   dev_labels,   tokenizer, label2id, shuffle=False)
+        test_loader  = build_dataloader(test_texts,  test_labels,  tokenizer, label2id, shuffle=False)
 
         trainer.train(train_loader, epochs=15)
+        dev_preds,  dev_refs  = trainer.evaluate(dev_loader)
         preds, refs = trainer.evaluate(test_loader)
 
     evaluator = Evaluator(id2label)
+
+    # Dev evaluation is observational only — consistent with the CrossNER paper's
+    # fixed-step protocol (no checkpoint selection on dev). Logged for monitoring.
+    dev_f1, dev_report = evaluator.evaluate(dev_preds, dev_refs)
+    print("Dev F1:", dev_f1)
+    print(dev_report)
+
     f1, report = evaluator.evaluate(preds, refs)
-    print("F1:", f1)
+    print("Test F1:", f1)
     print(report)
-    save_metrics(f1, report, config, preds=preds, refs=refs, texts=test_texts, labels=test_labels)
+
+    save_metrics(f1, report, config, preds=preds, refs=refs, texts=test_texts, labels=test_labels,
+                 dev_f1=dev_f1, dev_report=dev_report)
 
 
 if __name__ == "__main__":
