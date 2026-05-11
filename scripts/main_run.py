@@ -81,8 +81,8 @@ def save_metrics(f1, report, config, preds=None, refs=None, texts=None, labels=N
     if preds is not None and refs is not None:
         preds_filename = f"results/metrics/preds_{config['mode']}_{datetime.now().strftime('%Y%m%d_%H%M%S')}.json"
         with open(preds_filename, "w") as f:
-            preds_list = [list(map(int, p)) for p in preds]
-            refs_list = [list(map(int, r)) for r in refs]
+            preds_list = [[int(p) for p, l in zip(pred, ref) if l != -100] for pred, ref in zip(preds, refs)]
+            refs_list  = [[int(r) for r in ref if r != -100] for ref in refs]
             payload = {"preds": preds_list, "refs": refs_list, "mode": config["mode"]}
             if texts is not None:
                 payload["texts"] = [" ".join(sentence) for sentence in texts]
