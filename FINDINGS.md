@@ -214,3 +214,26 @@ DAPT (0.670) outperforms the in-domain baseline crossner (0.659) — the MLM pre
 - Lowering the fine-tuning LR to 2e-5 was tried but hurt performance (0.663), suggesting the original 5e-5 is already well-calibrated for this setting
 
 **Fast convergence observed:** Training loss dropped from 1.62 (epoch 1) to 0.085 (epoch 6), much faster than crossner — consistent with the DAPT encoder having already learned strong political text representations.
+
+---
+
+## Confusion Matrix Analysis: Transfer vs DAPT
+
+Entity-level span confusion counts (exact boundary match, Gold → Predicted):
+
+| Pair (Gold → Predicted) | Transfer | DAPT | Δ |
+|---|---|---|---|
+| politicalparty → organisation | 28 | 7 | −21 |
+| politician → person | 18 | 13 | −5 |
+| location → country | 7 | 4 | −3 |
+| organisation → politicalparty | 41 | 46 | +5 |
+| country → location | 59 | 73 | +14 |
+| person → politician | 327 | 329 | ≈0 |
+
+### Finding: DAPT helps ORG-type hierarchy but hurts LOC-type and event detection
+
+DAPT reduces `politicalparty → organisation` confusion by 75% (28→7) — the clearest win. Political text is dense with named parties; MLM pre-training teaches the encoder to distinguish them from generic organisations before any NER labels are seen.
+
+The opposite pattern holds for location-type entities: `country → location` confusions increase by +14 under DAPT. Country names appear heavily in political text in location-like syntactic contexts ("talks in Berlin", "war in Ukraine"), so domain adaptation reinforces rather than resolves this ambiguity. The `event` label shows the same direction — diagonal drops from 0.43 (transfer) to 0.35 (DAPT) — consistent with political event mentions also appearing in contexts the MLM cannot distinguish from general location or misc usage.
+
+`person → politician` (327→329) is unchanged by DAPT, confirming this confusion is driven entirely by the 14-instance `person` class imbalance, not by domain representations.
