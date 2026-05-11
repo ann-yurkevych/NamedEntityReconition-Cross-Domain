@@ -13,6 +13,8 @@ Saves final F1 and classification report as JSON.
 '''
 
 
+import argparse
+import random
 import torch
 import json
 import os
@@ -184,114 +186,39 @@ def run(config):
         Pipeline:
         Train: CoNLL2003 + CrossNER politics simultaneously
         Test: CrossNER politics
-        
-        Following the paper: upsample CrossNER target domain data 
+        Following the paper: upsample CrossNER target domain data
         to balance source and target domain data samples.
         '''
         # Load both datasets
         conll_texts, conll_labels = load_conll2003(config["data_dir"])
-        (train_texts, train_labels), _, (test_texts, test_labels) = load_crossner(
+        (train_texts, train_labels), (dev_texts, dev_labels), (test_texts, test_labels) = load_crossner(
             config["data_dir"], config["domain"]
         )
-
         # Map CoNLL labels to CrossNER politics label space
         conll_labels_mapped = [map_conll_to_politics(seq) for seq in conll_labels]
 
-        # Upsample CrossNER to match CoNLL size (as described in the paper)
         crossner_size = len(train_texts)
         conll_size = len(conll_texts)
-
         upsample_factor = conll_size // crossner_size
         remainder = conll_size % crossner_size
-
-        upsampled_texts = train_texts * upsample_factor + train_texts[:remainder]
+        upsampled_texts  = train_texts  * upsample_factor + train_texts[:remainder]
         upsampled_labels = train_labels * upsample_factor + train_labels[:remainder]
+        print(f"[CoNLL size: {conll_size}, CrossNER upsampled: {len(upsampled_texts)}]")
 
-        print(f"[CoNLL size: {conll_size}, CrossNER size: {crossner_size}, "
-            f"Upsampled CrossNER size: {len(upsampled_texts)}]")
-
-        # Combine CoNLL and upsampled CrossNER
-        combined_texts = conll_texts + upsampled_texts
-        combined_labels = conll_labels_mapped + upsampled_labels
-
-        # Shuffle combined dataset by creating paired list
-        combined = list(zip(combined_texts, combined_labels))
-        import random
+        combined = list(zip(conll_texts + upsampled_texts, conll_labels_mapped + upsampled_labels))
         random.seed(42)
         random.shuffle(combined)
         combined_texts, combined_labels = zip(*combined)
-        combined_texts = list(combined_texts)
-        combined_labels = list(combined_labels)
 
         train_loader = build_dataloader(
-            combined_texts, combined_labels, tokenizer, label2id,
+            list(combined_texts), list(combined_labels), tokenizer, label2id,
             label_mapper=None, shuffle=True
         )
-        test_loader = build_dataloader(
-            test_texts, test_labels, tokenizer, label2id,
-            label_mapper=None, shuffle=False
-        )
+        dev_loader  = build_dataloader(dev_texts,  dev_labels,  tokenizer, label2id, shuffle=False)
+        test_loader = build_dataloader(test_texts, test_labels, tokenizer, label2id, shuffle=False)
 
         trainer.train(train_loader, epochs=15)
-        dev_preds,  dev_refs  = trainer.evaluate(dev_loader)
-        preds, refs = trainer.evaluate(test_loader)
-        
-    elif config["mode"] == "jointly_train":
-        '''
-        4. BERT (Jointly Train on Both Source and Target Domains)
-
-        Pipeline:
-        Train: CoNLL2003 + CrossNER politics simultaneously
-        Test: CrossNER politics
-        
-        Following the paper: upsample CrossNER target domain data 
-        to balance source and target domain data samples.
-        '''
-        # Load both datasets
-        conll_texts, conll_labels = load_conll2003(config["data_dir"])
-        (train_texts, train_labels), _, (test_texts, test_labels) = load_crossner(
-            config["data_dir"], config["domain"]
-        )
-
-        # Map CoNLL labels to CrossNER politics label space
-        conll_labels_mapped = [map_conll_to_politics(seq) for seq in conll_labels]
-
-        # Upsample CrossNER to match CoNLL size (as described in the paper)
-        crossner_size = len(train_texts)
-        conll_size = len(conll_texts)
-
-        upsample_factor = conll_size // crossner_size
-        remainder = conll_size % crossner_size
-
-        upsampled_texts = train_texts * upsample_factor + train_texts[:remainder]
-        upsampled_labels = train_labels * upsample_factor + train_labels[:remainder]
-
-        print(f"[CoNLL size: {conll_size}, CrossNER size: {crossner_size}, "
-            f"Upsampled CrossNER size: {len(upsampled_texts)}]")
-
-        # Combine CoNLL and upsampled CrossNER
-        combined_texts = conll_texts + upsampled_texts
-        combined_labels = conll_labels_mapped + upsampled_labels
-
-        # Shuffle combined dataset by creating paired list
-        combined = list(zip(combined_texts, combined_labels))
-        import random
-        random.seed(42)
-        random.shuffle(combined)
-        combined_texts, combined_labels = zip(*combined)
-        combined_texts = list(combined_texts)
-        combined_labels = list(combined_labels)
-
-        train_loader = build_dataloader(
-            combined_texts, combined_labels, tokenizer, label2id,
-            label_mapper=None, shuffle=True
-        )
-        test_loader = build_dataloader(
-            test_texts, test_labels, tokenizer, label2id,
-            label_mapper=None, shuffle=False
-        )
-
-        trainer.train(train_loader, epochs=15)
+        dev_preds, dev_refs = trainer.evaluate(dev_loader)
         preds, refs = trainer.evaluate(test_loader)
 
     elif config["mode"] == "dapt":
@@ -304,7 +231,7 @@ def run(config):
         Step 3: Finetune on CrossNER
         '''
 
-        tokenizer = AutoTokenizer.from_pretrained(config["conll_model_path"])
+        tokenizer = AutoTokenizer.from_pretrained(config["model_name"])
         model = BertForNER(config["dapt_model_path"], len(label_list)).to(DEVICE)
         optimizer = optim.AdamW(model.parameters(), lr=5e-5) 
         trainer = Trainer(model, optimizer, DEVICE, label_weights=None)
@@ -338,11 +265,19 @@ def run(config):
 
 
 if __name__ == "__main__":
+    parser = argparse.ArgumentParser()
+    parser.add_argument(
+        "--mode",
+        choices=["zero_shot", "crossner", "transfer", "jointly_train", "dapt"],
+        required=True,
+    )
+    args = parser.parse_args()
+
     config = {
         "model_name": "bert-base-cased",
         "data_dir": "data/raw",
         "domain": "politics",
-        "mode": "transfer", # change to: crossner, transfer, jointly_train, dapt
+        "mode": args.mode,
         "labels": get_crossner_labels(),
         "dapt_model_path": "results/models/bert-dapt-politics",
         "conll_model_path": "results/models/bert-conll-politics",

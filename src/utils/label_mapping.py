@@ -72,7 +72,7 @@ def _map_tag(tag: str, mapping: dict[str, str]) -> str:
     if tag == "O":
         return "O"
     prefix, etype = tag.split("-", 1)
-    return f"{prefix}-{mapping.get(etype.lower(), etype)}" #Preserves BIO prefix (B or I), remaps entity type., O stays O
+    return f"{prefix}-{mapping.get(etype, etype)}" #Preserves BIO prefix (B or I), remaps entity type., O stays O
 
 
 def collapse_to_coarse(tags: list[str]) -> list[str]:

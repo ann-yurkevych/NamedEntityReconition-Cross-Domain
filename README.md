@@ -59,10 +59,25 @@ This script fetches CoNLL-2003 via Hugging Face, downloads CrossNER Politics dir
 
 ---
 
-### Step 4 - Run an experiment
+### Step 4 - Run experiments
+
+There are two hard ordering constraints; everything else is independent:
+
+| Constraint | Reason |
+|---|---|
+| `run_dapt` **before** `dapt` | `run_dapt` writes MLM-pretrained weights to `results/models/bert-dapt-politics/`; `dapt` mode loads from that path and crashes if it is missing. |
+| `transfer` **before** `dapt` | `transfer` saves the CoNLL-finetuned encoder + tokenizer to `results/models/bert-conll-politics/`; `dapt` mode loads the tokenizer from there. |
+
+The following sequence satisfies both constraints:
 
 ```bash
-python -m scripts.run_experiment
+python -m scripts.run_dapt                       # MLM pre-training (~10k steps, longest step)
+
+python -m scripts.main_run --mode crossner       # independent
+python -m scripts.main_run --mode zero_shot      # independent
+python -m scripts.main_run --mode transfer       # saves bert-conll-politics (needed by dapt)
+python -m scripts.main_run --mode jointly_train  # independent
+python -m scripts.main_run --mode dapt           # requires bert-dapt-politics + bert-conll-politics
 ```
 
 The script uses CUDA automatically if a GPU is available. If you have a GPU, reinstall torch with the CUDA build after activating the environment:
@@ -71,7 +86,7 @@ The script uses CUDA automatically if a GPU is available. If you have a GPU, rei
 pip install torch --index-url https://download.pytorch.org/whl/cu128 --upgrade
 ```
 
-The experiment mode is set in the `config` dict at the bottom of [scripts/run_experiment.py](scripts/run_experiment.py). Available modes: `crossner`, `zero_shot`, `transfer`.
+Results are saved to `results/metrics/` with timestamps.
 
 ---
 

@@ -4,6 +4,7 @@ from typing import Tuple
 from transformers import (
     AutoTokenizer,
     AutoModelForMaskedLM,
+    DataCollatorForLanguageModeling,
     Trainer,
     TrainingArguments,
     PreTrainedTokenizer,
@@ -87,7 +88,7 @@ def main():
     DRY_RUN = False  # when True it does a small test to be sure there are no syntax/logic errors, FALSE = real run
 
     model_name = "bert-base-cased"
-    train_file = "data/raw/unlabeled/politics/politics_domainlevel.txt"
+    train_file = "data/raw/unlabeled/politics/politics_integrated.txt"
     output_dir = "results/models/bert-dapt-politics"
     block_size = 256
     batch_size = 8
@@ -116,6 +117,13 @@ def main():
 
     collator = DataCollatorForSpanLanguageModeling(
         tokenizer=tokenizer, mlm_probability=0.15
+    )
+
+    # Token-level collator - included here for reference and future work, but not used in the paper's reported experiments.
+    # Not used in reported experiments; span-level is the paper's best
+    # configuration and is the collator passed to Trainer above.
+    collator_token_level = DataCollatorForLanguageModeling(
+        tokenizer=tokenizer, mlm=True, mlm_probability=0.15
     )
 
     training_args = TrainingArguments(
