@@ -19,16 +19,10 @@ cd NamedEntityReconition-Cross-Domain
 
 ### Step 2 - Install dependencies
 
-**Option A: conda**
+**Option A: conda (recommended)**
 
 Open a terminal where `conda` is available (on Windows: open a new PowerShell after running `conda init powershell`, or use Anaconda Prompt):
 
-```bash
-conda env create -f environment.yml   # create the environment (once)
-conda activate crossner               # activate it (every session)
-```
-
-If running into problems try creating another env with python 3.11
 ```bash
 conda create -n crossner311 python=3.11
 conda activate crossner311
@@ -38,7 +32,7 @@ pip install -r requirements.txt
 To verify it worked:
 
 ```bash
-python --version   # should say Python 3.10 or newer
+python --version   # should say Python 3.11
 ```
 
 **Option B: pip**
@@ -61,24 +55,17 @@ This script fetches CoNLL-2003 via Hugging Face, downloads CrossNER Politics dir
 
 ### Step 4 - Run experiments
 
-There are two hard ordering constraints; everything else is independent:
-
-| Constraint | Reason |
-|---|---|
-| `run_dapt` **before** `dapt` | `run_dapt` writes MLM-pretrained weights to `results/models/bert-dapt-politics/`; `dapt` mode loads from that path and crashes if it is missing. |
-| `transfer` **before** `dapt` | `transfer` saves the CoNLL-finetuned encoder + tokenizer to `results/models/bert-conll-politics/`; `dapt` mode loads the tokenizer from there. |
-
-The following sequence satisfies both constraints:
+All five modes can be run independently. The DAPT model (`bert-dapt-politics`) is hosted on [HuggingFace](https://huggingface.co/daradage/bert-dapt-politics) and downloaded automatically on first use — no pretraining step needed.
 
 ```bash
-python -m scripts.run_dapt                       # MLM pre-training (~10k steps, longest step)
-
-python -m scripts.main_run --mode crossner       # independent
-python -m scripts.main_run --mode zero_shot      # independent
-python -m scripts.main_run --mode transfer       # saves bert-conll-politics (needed by dapt)
-python -m scripts.main_run --mode jointly_train  # independent
-python -m scripts.main_run --mode dapt           # requires bert-dapt-politics + bert-conll-politics
+python -m scripts.main_run --mode crossner       # train + test on CrossNER politics
+python -m scripts.main_run --mode zero_shot      # train on CoNLL, test on CrossNER (no finetune)
+python -m scripts.main_run --mode transfer       # CoNLL pretraining → CrossNER finetune
+python -m scripts.main_run --mode jointly_train  # joint CoNLL + CrossNER training
+python -m scripts.main_run --mode dapt           # loads DAPT model from HuggingFace automatically
 ```
+
+> **Note:** if you want to reproduce the DAPT pretraining from scratch instead of using the shared weights, run `python -m scripts.run_dapt` first (≈25 000 training steps, requires a GPU).
 
 The script uses CUDA automatically if a GPU is available. If you have a GPU, reinstall torch with the CUDA build after activating the environment:
 
@@ -95,10 +82,10 @@ Results are saved to `results/metrics/` with timestamps.
 Register the conda environment as a Jupyter kernel (once):
 
 ```bash
-python -m ipykernel install --user --name crossner --display-name "Python (crossner)"
+python -m ipykernel install --user --name crossner311 --display-name "Python (crossner311)"
 ```
 
-Then open any notebook in VS Code, click the kernel selector in the top right, and choose **Python (crossner)** from the list. If it doesn't appear, reload VS Code.
+Then open any notebook in VS Code, click the kernel selector in the top right, and choose **Python (crossner311)** from the list. If it doesn't appear, reload VS Code.
 
 ---
 

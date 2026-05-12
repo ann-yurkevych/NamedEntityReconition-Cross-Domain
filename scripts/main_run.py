@@ -279,7 +279,7 @@ if __name__ == "__main__":
         "domain": "politics",
         "mode": args.mode,
         "labels": get_crossner_labels(),
-        "dapt_model_path": "results/models/bert-dapt-politics",
+        "dapt_model_path": "daradage/bert-dapt-politics",
         "conll_model_path": "results/models/bert-conll-politics",
     }
 
