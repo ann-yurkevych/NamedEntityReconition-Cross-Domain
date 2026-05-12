@@ -19,16 +19,10 @@ cd NamedEntityReconition-Cross-Domain
 
 ### Step 2 - Install dependencies
 
-**Option A: conda**
+**Option A: conda (recommended)**
 
 Open a terminal where `conda` is available (on Windows: open a new PowerShell after running `conda init powershell`, or use Anaconda Prompt):
 
-```bash
-conda env create -f environment.yml   # create the environment (once)
-conda activate crossner               # activate it (every session)
-```
-
-If running into problems try creating another env with python 3.11
 ```bash
 conda create -n crossner311 python=3.11
 conda activate crossner311
@@ -38,7 +32,7 @@ pip install -r requirements.txt
 To verify it worked:
 
 ```bash
-python --version   # should say Python 3.10 or newer
+python --version   # should say Python 3.11
 ```
 
 **Option B: pip**
@@ -95,10 +89,10 @@ Results are saved to `results/metrics/` with timestamps.
 Register the conda environment as a Jupyter kernel (once):
 
 ```bash
-python -m ipykernel install --user --name crossner --display-name "Python (crossner)"
+python -m ipykernel install --user --name crossner311 --display-name "Python (crossner311)"
 ```
 
-Then open any notebook in VS Code, click the kernel selector in the top right, and choose **Python (crossner)** from the list. If it doesn't appear, reload VS Code.
+Then open any notebook in VS Code, click the kernel selector in the top right, and choose **Python (crossner311)** from the list. If it doesn't appear, reload VS Code.
 
 ---
 

@@ -170,7 +170,7 @@ This result is consistent with the CrossNER paper, which reports jointly_train u
 
 **Model:** `bert-base-cased` MLM-adapted on politics corpus → fine-tuned on CrossNER Politics  
 **Mode:** `dapt`  
-**DAPT:** 25,000 steps, span-level masking (p=0.15), integrated corpus, block_size=256  
+**DAPT:** tried 10,000 and 25,000 steps, span-level masking (p=0.15), integrated corpus, block_size=256  
 **Fine-tuning epochs:** 15  
 **Batch size:** 16  
 **Optimizer:** AdamW, lr=5e-5
@@ -226,7 +226,16 @@ DAPT (0.683) outperforms the in-domain baseline crossner (0.659). The gap with t
 
 **Why more steps help:** At 10k steps the MLM loss was still clearly descending (eval_loss: 2.241→2.144→2.087→2.015 at 5k-step intervals). 25k steps covers ~100% of the integrated corpus (vs ~41% at 10k), giving the encoder substantially more political text exposure before fine-tuning.
 
-**Discriminative fine-tuning was tried and rejected:** Encoder lr=2e-5, head lr=5e-5 dropped Test F1 to 0.617. With only 200 fine-tuning sentences the encoder learns too slowly at 2e-5 for rare labels to converge — the head races ahead of the encoder.
+**Discriminative fine-tuning — tried and rejected:**
+
+*Motivation:* When a DAPT checkpoint is loaded and a classification head attached, the head is randomly initialised. In the first few fine-tuning steps it produces essentially random predictions, generating large loss values. Those gradients propagate back through the entire encoder and can overwrite the domain representations that 25,000 MLM steps built. Transfer avoids this because the CoNLL phase trains both encoder and head together on a real NER objective — by the time CrossNER fine-tuning starts, the head already knows roughly what entity boundaries look like, gradients are small and stable, and the encoder is not destabilised. The standard fix is discriminative fine-tuning: a small encoder lr and a larger head lr so the head converges quickly without sending destructive gradients into the encoder.
+
+*What we tried:*
+- Encoder lr=2e-5, head lr=5e-5 (2.5:1 ratio) → Test F1 0.617
+- Encoder lr=1e-5, head lr=5e-5 (5:1 ratio) → Test F1 0.622
+- Both worse than flat lr=5e-5 (F1 0.683)
+
+*Why it failed:* With only 200 CrossNER training sentences (~195 fine-tuning steps total), the encoder at 1e-5 or 2e-5 does not update fast enough to connect the DAPT representations to the NER task. The head stabilises but the encoder stays too generic. Discriminative fine-tuning requires enough fine-tuning data for the head to reach a stable regime before encoder updates matter — 200 sentences is not enough. Flat 5e-5 forces encoder and head to learn simultaneously, which is what this data size requires.
 
 **Fast convergence observed:** Training loss dropped from 1.62 (epoch 1) to 0.085 (epoch 6), much faster than crossner — consistent with the DAPT encoder having already learned strong political text representations.
 
