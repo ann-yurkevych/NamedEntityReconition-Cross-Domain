@@ -24,8 +24,8 @@ cd NamedEntityReconition-Cross-Domain
 Open a terminal where `conda` is available (on Windows: open a new PowerShell after running `conda init powershell`, or use Anaconda Prompt):
 
 ```bash
-conda create -n crossner311 python=3.11
-conda activate crossner311
+conda create -n crossner311 python=3.11 && \
+conda activate crossner311 && \
 pip install -r requirements.txt
 ```
 
