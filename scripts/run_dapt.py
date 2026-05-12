@@ -4,6 +4,7 @@ from typing import Tuple
 from transformers import (
     AutoTokenizer,
     AutoModelForMaskedLM,
+    DataCollatorForLanguageModeling,
     Trainer,
     TrainingArguments,
     PreTrainedTokenizer,
@@ -87,7 +88,7 @@ def main():
     DRY_RUN = False  # when True it does a small test to be sure there are no syntax/logic errors, FALSE = real run
 
     model_name = "bert-base-cased"
-    train_file = "data/raw/unlabeled/politics/politics_domainlevel.txt"
+    train_file = "data/raw/unlabeled/politics/politics_integrated.txt"
     output_dir = "results/models/bert-dapt-politics"
     block_size = 256
     batch_size = 8
@@ -118,10 +119,17 @@ def main():
         tokenizer=tokenizer, mlm_probability=0.15
     )
 
+    # Token-level collator - included here for reference and future work, but not used in the paper's reported experiments.
+    # Not used in reported experiments; span-level is the paper's best
+    # configuration and is the collator passed to Trainer above.
+    collator_token_level = DataCollatorForLanguageModeling(
+        tokenizer=tokenizer, mlm=True, mlm_probability=0.15
+    )
+
     training_args = TrainingArguments(
         output_dir=output_dir,
         num_train_epochs=3 if not DRY_RUN else 1,
-        max_steps=10000 if not DRY_RUN else 20,
+        max_steps=25000 if not DRY_RUN else 20,
         per_device_train_batch_size=batch_size,
         per_device_eval_batch_size=batch_size,
         gradient_accumulation_steps=2,
@@ -146,7 +154,9 @@ def main():
         eval_dataset=split["test"],
     )
 
+    # resume = "results/models/bert-dapt-politics/checkpoint-22000"
     trainer.train()
+    #trainer.train(resume_from_checkpoint=resume)
     trainer.save_model(output_dir)
     tokenizer.save_pretrained(output_dir)
     print(f"[DAPT checkpoint saved to {output_dir}]")

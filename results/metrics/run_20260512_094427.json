@@ -1,0 +1,35 @@
+{
+  "f1": 0.683481589911046,
+  "config": {
+    "model_name": "bert-base-cased",
+    "data_dir": "data/raw",
+    "domain": "politics",
+    "mode": "dapt",
+    "labels": [
+      "O",
+      "B-person",
+      "I-person",
+      "B-politician",
+      "I-politician",
+      "B-organisation",
+      "I-organisation",
+      "B-politicalparty",
+      "I-politicalparty",
+      "B-location",
+      "I-location",
+      "B-country",
+      "I-country",
+      "B-misc",
+      "I-misc",
+      "B-event",
+      "I-event",
+      "B-election",
+      "I-election"
+    ],
+    "dapt_model_path": "results/models/bert-dapt-politics",
+    "conll_model_path": "results/models/bert-conll-politics"
+  },
+  "report": "                precision    recall  f1-score   support\n\n       country       0.73      0.53      0.62       418\n      election       0.87      0.94      0.91       434\n         event       0.42      0.34      0.38       195\n      location       0.72      0.88      0.79       599\n          misc       0.33      0.50      0.40       258\n  organisation       0.55      0.74      0.63       513\n        person       0.47      0.02      0.04       354\npoliticalparty       0.78      0.87      0.82       953\n    politician       0.55      0.96      0.70       485\n\n     micro avg       0.65      0.72      0.68      4209\n     macro avg       0.60      0.64      0.59      4209\n  weighted avg       0.65      0.72      0.66      4209\n",
+  "dev_f1": 0.7198364008179958,
+  "dev_report": "                precision    recall  f1-score   support\n\n       country       0.77      0.69      0.73       183\n      election       0.88      0.95      0.91       528\n         event       0.66      0.45      0.53       186\n      location       0.58      0.79      0.67       211\n          misc       0.33      0.52      0.40       193\n  organisation       0.60      0.72      0.66       431\n        person       0.25      0.01      0.01       286\npoliticalparty       0.83      0.91      0.87      1053\n    politician       0.54      0.95      0.69       411\n\n     micro avg       0.69      0.76      0.72      3482\n     macro avg       0.60      0.66      0.61      3482\n  weighted avg       0.67      0.76      0.69      3482\n"
+}
