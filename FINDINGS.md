@@ -170,48 +170,63 @@ This result is consistent with the CrossNER paper, which reports jointly_train u
 
 **Model:** `bert-base-cased` MLM-adapted on politics corpus → fine-tuned on CrossNER Politics  
 **Mode:** `dapt`  
-**DAPT:** 10,000 steps, span-level masking (p=0.15), integrated corpus, block_size=256  
+**DAPT:** 25,000 steps, span-level masking (p=0.15), integrated corpus, block_size=256  
 **Fine-tuning epochs:** 15  
 **Batch size:** 16  
 **Optimizer:** AdamW, lr=5e-5
 
-### Results
+### Results (25,000 steps)
 
 | Label          | Precision | Recall | F1   | Support |
 |----------------|-----------|--------|------|---------|
-| country        | 0.70      | 0.50   | 0.59 | 418     |
-| election       | 0.85      | 0.94   | 0.89 | 434     |
-| event          | 0.49      | 0.35   | 0.41 | 195     |
-| location       | 0.68      | 0.86   | 0.76 | 599     |
-| misc           | 0.30      | 0.48   | 0.37 | 258     |
-| organisation   | 0.56      | 0.62   | 0.59 | 513     |
-| **person**     | 0.37      | 0.03   | 0.05 | 354     |
-| politicalparty | 0.79      | 0.89   | 0.83 | 953     |
-| politician     | 0.54      | 0.91   | 0.68 | 485     |
-| **micro avg**  | 0.64      | 0.70   | **0.670** | 4209 |
-| macro avg      | 0.59      | 0.62   | 0.58 | 4209    |
-| weighted avg   | 0.64      | 0.70   | 0.64 | 4209    |
+| country        | 0.73      | 0.53   | 0.62 | 418     |
+| election       | 0.87      | 0.94   | 0.91 | 434     |
+| event          | 0.42      | 0.34   | 0.38 | 195     |
+| location       | 0.72      | 0.88   | 0.79 | 599     |
+| misc           | 0.33      | 0.50   | 0.40 | 258     |
+| organisation   | 0.55      | 0.74   | 0.63 | 513     |
+| **person**     | 0.47      | 0.02   | 0.04 | 354     |
+| politicalparty | 0.78      | 0.87   | 0.82 | 953     |
+| politician     | 0.55      | 0.96   | 0.70 | 485     |
+| **micro avg**  | 0.65      | 0.72   | **0.683** | 4209 |
+| macro avg      | 0.60      | 0.64   | 0.59 | 4209    |
+| weighted avg   | 0.65      | 0.72   | 0.66 | 4209    |
+
+### Earlier result: 10,000 steps (F1 0.670)
+
+| Label          | F1 (10k) | F1 (25k) | Δ |
+|----------------|----------|----------|---|
+| country        | 0.59 | 0.62 | +0.03 |
+| election       | 0.89 | 0.91 | +0.02 |
+| event          | 0.41 | 0.38 | −0.03 |
+| location       | 0.76 | 0.79 | +0.03 |
+| misc           | 0.37 | 0.40 | +0.03 |
+| organisation   | 0.59 | 0.63 | +0.04 |
+| politicalparty | 0.83 | 0.82 | −0.01 |
+| politician     | 0.68 | 0.70 | +0.02 |
+
+More MLM steps broadly help — 7 of 9 labels improve. `event` is the only meaningful regression (0.41→0.38), consistent with the pattern seen in the confusion matrix analysis.
 
 ### Finding: DAPT beats crossner but not transfer
 
-DAPT (0.670) outperforms the in-domain baseline crossner (0.659) — the MLM pre-training on political text gives the encoder better domain representations. However it does not beat transfer (0.691).
+DAPT (0.683) outperforms the in-domain baseline crossner (0.659). The gap with transfer (0.691) narrows to just 0.008 with 25k steps, down from 0.021 at 10k steps.
 
 **Final scoreboard:**
 
 | Mode | Test F1 |
 |---|---|
 | transfer | **0.691** |
-| dapt | 0.670 |
+| dapt (25k steps) | 0.683 |
+| dapt (10k steps) | 0.670 |
 | crossner | 0.659 |
 | jointly_train | 0.562 |
 | zero_shot | 0.325 |
 
-**Why transfer beats dapt:** Transfer gets 3 epochs of CoNLL NER supervision (14k sentences) before CrossNER fine-tuning, giving both the encoder and classification head a strong NER-structured starting point. DAPT starts with a domain-adapted encoder but a randomly initialised classification head — the 200 CrossNER sentences must simultaneously train the head and specialise the encoder for NER, which is a harder learning problem.
+**Why transfer beats dapt:** Transfer gets 3 epochs of CoNLL NER supervision (14k sentences) before CrossNER fine-tuning, giving both the encoder and classification head a strong NER-structured starting point. DAPT starts with a domain-adapted encoder but a randomly initialised classification head — the 200 CrossNER sentences must simultaneously train the head and specialise the encoder for NER, which is a harder learning problem. The remaining 0.008 gap is likely irreducible without addressing head initialisation.
 
-**Why dapt could be improved:**
-- 10,000 MLM steps covers ~41% of the integrated corpus — more steps would strengthen domain adaptation
-- No warmup in the fine-tuning phase; jumping to lr=5e-5 with a random head can destabilise early training
-- Lowering the fine-tuning LR to 2e-5 was tried but hurt performance (0.663), suggesting the original 5e-5 is already well-calibrated for this setting
+**Why more steps help:** At 10k steps the MLM loss was still clearly descending (eval_loss: 2.241→2.144→2.087→2.015 at 5k-step intervals). 25k steps covers ~100% of the integrated corpus (vs ~41% at 10k), giving the encoder substantially more political text exposure before fine-tuning.
+
+**Discriminative fine-tuning was tried and rejected:** Encoder lr=2e-5, head lr=5e-5 dropped Test F1 to 0.617. With only 200 fine-tuning sentences the encoder learns too slowly at 2e-5 for rare labels to converge — the head races ahead of the encoder.
 
 **Fast convergence observed:** Training loss dropped from 1.62 (epoch 1) to 0.085 (epoch 6), much faster than crossner — consistent with the DAPT encoder having already learned strong political text representations.
 

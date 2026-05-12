@@ -129,7 +129,7 @@ def main():
     training_args = TrainingArguments(
         output_dir=output_dir,
         num_train_epochs=3 if not DRY_RUN else 1,
-        max_steps=10000 if not DRY_RUN else 20,
+        max_steps=25000 if not DRY_RUN else 20,
         per_device_train_batch_size=batch_size,
         per_device_eval_batch_size=batch_size,
         gradient_accumulation_steps=2,
@@ -154,7 +154,9 @@ def main():
         eval_dataset=split["test"],
     )
 
+    # resume = "results/models/bert-dapt-politics/checkpoint-22000"
     trainer.train()
+    #trainer.train(resume_from_checkpoint=resume)
     trainer.save_model(output_dir)
     tokenizer.save_pretrained(output_dir)
     print(f"[DAPT checkpoint saved to {output_dir}]")
