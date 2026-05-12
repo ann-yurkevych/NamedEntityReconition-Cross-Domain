@@ -82,10 +82,10 @@ Results are saved to `results/metrics/` with timestamps.
 Register the conda environment as a Jupyter kernel (once):
 
 ```bash
-python -m ipykernel install --user --name crossner311 --display-name "Python (crossner311)"
+python -m ipykernel install --user --name crossner311 --display-name "crossner311"
 ```
 
-Then open any notebook in VS Code, click the kernel selector in the top right, and choose **Python (crossner311)** from the list. If it doesn't appear, reload VS Code.
+Then open any notebook in VS Code, click the kernel selector in the top right, and choose **crossner311** from the list. If it doesn't appear, reload VS Code.
 
 ---
 
