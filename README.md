@@ -89,6 +89,47 @@ Then open any notebook in VS Code, click the kernel selector in the top right, a
 
 ---
 
+## Step 6 - Running Utility Scripts
+
+### Domain-Adaptive Pretraining (DAPT)
+
+Run this script in order to reproduce the DAPT step from the paper by further pretraining BERT on the unlabeled politics corpus with span-style masking:
+
+```bash
+python scripts/run_dapt.py
+```
+**What it does:**
+- Loads the unlabeled politics corpus from `politics_integrated.txt`
+- Fine-tunes a masked language model with span-style masking
+- Saves the resulting checkpoint to `bert-dapt-politics`
+
+**Notes:**
+- This is a long-running, GPU-heavy job
+
+
+### Emerging Entity Analysis
+
+Use this script to compare performance on seen versus unseen entities:
+
+```bash
+python scripts/emerging_entity_analysis.py
+```
+
+**What it does:**
+- Loads the CoNLL-2003 training data and CrossNER Politics test data
+- Reads a saved predictions JSON file from metrics
+- Splits entities into seen and unseen groups
+- Prints classification reports and F1 scores for both groups
+
+**Notes:**
+- Before running it, in the line 105 in the "emerging_entity_analysis.py" file change the PRED_PATH for the one which you received from the MAIN run with the DAPT mode, you can find it in the results/metrics folder and it should be named like preds_dapt_20260511_224820.json (the timestamp will differ):
+
+```bash
+PRED_PATH = "results/metrics/preds_dapt_20260511_224820.json" # change the PRED_PATH
+```
+
+
+
 ## Folder Structure
 
 ```

@@ -102,7 +102,7 @@ def split_seen_unseen(test_words, test_true, test_pred, seen_lexicon):
 # 1. Define Paths
 TRAIN_PATH = "data/raw/conll2003/train.txt"
 TEST_PATH = "data/raw/crossner/politics/test.txt"
-PRED_PATH = "results/metrics/preds_dapt_20260511_224820.json"   # DAPT predictions
+PRED_PATH = "results/metrics/preds_dapt_20260511_224820.json"   # DAPT predictions # change the PRED_PATH for the one which you received from the DAPT run, you can find it in the results/metrics folder and it should be named like preds_dapt_20260511_224820.json (the timestamp will differ)
 # PRED_PATH = "results/metrics/preds_crossner_20260511_165540.json"   # CROSSNER predictions
 
 # 2. Load the mapping from your project
